@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Munjiz OS",
-  description: "Agentic tender-readiness workspace",
+  title: "منجز",
+  description: "نظام ذكي لإدارة جاهزية المنافسات",
 };
 
 export default function RootLayout({
@@ -13,9 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, fontFamily: "Arial, sans-serif" }}>
-        <div style={{ display: "flex", minHeight: "100vh" }}>
+    <html lang="ar" dir="rtl">
+      <body style={{ margin: 0, fontFamily: '"IBM Plex Sans Arabic", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif' }}>
+        <div style={{ display: "flex", minHeight: "100vh", direction: "rtl" }}>
           <aside
             style={{
               width: "240px",
@@ -24,24 +24,22 @@ export default function RootLayout({
               padding: "24px 16px",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>Munjiz OS</h2>
+            <h2 style={{ marginTop: 0 }}>منجز</h2>
 
             <nav style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <Link href="/dashboard" style={{ color: "white", textDecoration: "none" }}>
-                Dashboard
+                لوحة التحكم
               </Link>
               <Link href="/tenders" style={{ color: "white", textDecoration: "none" }}>
-                Tenders
+                المنافسات
               </Link>
               <Link href="/resources" style={{ color: "white", textDecoration: "none" }}>
-                Resources
+                الموارد
               </Link>
               <Link href="/tasks" style={{ color: "white", textDecoration: "none" }}>
-                Tasks
+                المهام
               </Link>
-              <Link href="/approvals" style={{ color: "white", textDecoration: "none" }}>
-                Approvals
-              </Link>
+
             </nav>
           </aside>
 
