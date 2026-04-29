@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ChangeEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -143,7 +143,7 @@ const statusOptions = [
 
 const allowedEvidenceExtensions = ".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg";
 
-export default function EmployeeWorkbenchPage() {
+function WorkbenchContent() {
     const searchParams = useSearchParams();
 
     const [team, setTeam] = useState<TeamMember[]>([]);
@@ -1169,6 +1169,14 @@ export default function EmployeeWorkbenchPage() {
                 </section>
             </section>
         </main>
+    );
+}
+
+export default function EmployeeWorkbenchPage() {
+    return (
+        <Suspense fallback={<div style={{ padding: "20px", textAlign: "center", direction: "rtl", fontFamily: "inherit" }}>جاري تحميل مساحة العمل...</div>}>
+            <WorkbenchContent />
+        </Suspense>
     );
 }
 

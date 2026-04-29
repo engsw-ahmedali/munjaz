@@ -154,7 +154,7 @@ export default function TenderReasoningPage() {
             setData(result);
         } catch (error) {
             console.error(error);
-            setMessage("تعذر تحميل مذكرة القرار. تأكد أن الباك إند يعمل وأن OpenAI Reasoning Layer شغال.");
+            setMessage("لم يتم توليد مذكرة القرار بعد. يمكن الاعتماد على لوحة القرار التنفيذية كمصدر رسمي لحالة الجاهزية، أو توليد المذكرة عند توفر طبقة التحليل.");
         } finally {
             setLoading(false);
         }
@@ -204,7 +204,7 @@ export default function TenderReasoningPage() {
         <main dir="rtl" style={pageStyle}>
             <section style={heroStyle}>
                 <div>
-                    <span style={pillStyle}>طبقة التفكير الاصطناعي LLM</span>
+                    <span style={pillStyle}>التحليل الاستراتيجي</span>
                     <h1 style={titleStyle}>مذكرة قرار الوكيل</h1>
                     <p style={subtitleStyle}>
                         تحويل بيانات الجاهزية، موارد الشركة، المستندات، وأدلة الموارد إلى مذكرة تنفيذية نظيفة قابلة للعرض على صاحب القرار.
@@ -214,6 +214,10 @@ export default function TenderReasoningPage() {
                 <div style={heroActionsStyle}>
                     <a href={`/tenders/${tenderId}`} style={secondaryButtonStyle}>
                         العودة للمنافسة
+                    </a>
+
+                    <a href={`/tenders/${tenderId}/executive`} style={secondaryButtonStyle}>
+                        لوحة القرار التنفيذية
                     </a>
 
                     <button onClick={copyMemo} disabled={!data} style={secondaryButtonStyle}>
@@ -233,7 +237,7 @@ export default function TenderReasoningPage() {
             {message ? <div style={errorStyle}>{message}</div> : null}
 
             {loading ? (
-                <section style={emptyStyle}>جاري بناء مذكرة القرار من طبقة OpenAI Reasoning...</section>
+                <section style={emptyStyle}>جاري بناء مذكرة القرار...</section>
             ) : null}
 
             {data ? (
@@ -285,7 +289,7 @@ export default function TenderReasoningPage() {
                             <span style={pillStyle}>مذكرة القرار التنفيذية</span>
                             <h2 style={sectionTitleStyle}>المذكرة التنفيذية</h2>
                             <p style={sectionSubtitleStyle}>
-                                تم تنظيف مخرجات OpenAI وعرضها كأقسام قابلة للقراءة بدل النص الخام.
+                                تم تحليل البيانات وعرضها كأقسام قابلة للقراءة.
                             </p>
                         </div>
 
@@ -300,9 +304,6 @@ export default function TenderReasoningPage() {
                         </div>
 
                         <div style={providerStyle}>
-                            <span>المحرك: {data.engine}</span>
-                            <span>المصدر: {data.provider}</span>
-                            {data.model ? <span>النموذج: {data.model}</span> : null}
                             <span>تاريخ التوليد: {formatDate(data.generated_at)}</span>
                         </div>
                     </section>
@@ -531,9 +532,9 @@ const secondaryButtonStyle: CSSProperties = {
 const errorStyle: CSSProperties = {
     padding: "16px",
     borderRadius: "16px",
-    background: "#fef2f2",
-    color: "#991b1b",
-    border: "1px solid #fecaca",
+    background: "#fffbeb",
+    color: "#92400e",
+    border: "1px solid #fde68a",
     fontWeight: 800,
     marginBottom: "18px",
 };

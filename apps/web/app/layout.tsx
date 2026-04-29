@@ -24,7 +24,16 @@ export default function RootLayout({
               padding: "24px 16px",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>منجز</h2>
+            <div style={{ marginBottom: "24px", paddingBottom: "24px", borderBottom: "1px solid #374151", textAlign: "center" }}>
+              <img 
+                src="/brand/munjiz-logo-transparent.png" 
+                alt="منجز" 
+                style={{ width: "140px", display: "block", margin: "0 auto" }} 
+              />
+              <div style={{ fontSize: "0.85rem", color: "#d1d5db", marginTop: "12px" }}>
+                نظام تشغيل المناقصات
+              </div>
+            </div>
 
             <nav style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <Link href="/dashboard" style={{ color: "white", textDecoration: "none" }}>
