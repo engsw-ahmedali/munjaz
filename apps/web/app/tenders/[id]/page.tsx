@@ -1126,6 +1126,9 @@ export default function TenderDetailsPage() {
     const [submissionGate, setSubmissionGate] = useState<SubmissionGate | null>(null);
     const [resourceGate, setResourceGate] = useState<CompanyResourceGate | null>(null);
 
+    type WorkspaceTab = "overview" | "gate" | "documents" | "evidence" | "tasks" | "resources";
+    const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
+
     const [coverageAnalyses, setCoverageAnalyses] = useState<
         Record<number, DocumentCoverageAnalysis>
     >({});
@@ -1625,7 +1628,90 @@ export default function TenderDetailsPage() {
                 submissionGate={submissionGate}
             />
 
-            {/* ── Agent Decision Section ───────────────────────────────── */}
+            {/* ── Workspace Tab Navigation ─────────────────────────────── */}
+            <div
+                style={{
+                    display: "flex",
+                    gap: "4px",
+                    background: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "18px",
+                    padding: "6px",
+                    marginBottom: "14px",
+                    boxShadow: "0 8px 22px rgba(15,23,42,0.035)",
+                    overflowX: "auto",
+                }}
+            >
+                {([
+                    { id: "overview",   label: "نظرة عامة",    icon: "◎" },
+                    { id: "gate",       label: "بوابة التقديم", icon: "⊛" },
+                    { id: "documents",  label: "المستندات",     icon: "◈" },
+                    { id: "evidence",   label: "مصفوفة الأدلة", icon: "◇" },
+                    { id: "tasks",      label: "مهام الفجوات",  icon: "◉" },
+                    { id: "resources",  label: "موارد الشركة",  icon: "◆" },
+                ] as { id: WorkspaceTab; label: string; icon: string }[]).map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: "9px 16px",
+                                borderRadius: "13px",
+                                border: "none",
+                                cursor: "pointer",
+                                fontWeight: 900,
+                                fontSize: "13px",
+                                whiteSpace: "nowrap",
+                                transition: "background 0.15s, color 0.15s",
+                                background: isActive ? "#232122" : "transparent",
+                                color: isActive ? "#ffffff" : "#6B7280",
+                                boxShadow: isActive
+                                    ? "0 4px 14px rgba(35,33,34,0.18)"
+                                    : "none",
+                            }}
+                        >
+                            <span style={{ fontSize: "11px", opacity: isActive ? 1 : 0.6 }}>
+                                {tab.icon}
+                            </span>
+                            {tab.label}
+                            {tab.id === "gate" && submissionGate && (
+                                <span
+                                    style={{
+                                        width: "7px",
+                                        height: "7px",
+                                        borderRadius: "999px",
+                                        background: submissionGate.can_submit ? "#59BA47" : "#ef4444",
+                                        display: "inline-block",
+                                        marginRight: "2px",
+                                    }}
+                                />
+                            )}
+                            {tab.id === "tasks" && suggestedTasks.length > 0 && (
+                                <span
+                                    style={{
+                                        background: isActive ? "rgba(255,255,255,0.22)" : "#F4F6F6",
+                                        color: isActive ? "white" : "#6B7280",
+                                        borderRadius: "999px",
+                                        padding: "1px 7px",
+                                        fontSize: "11px",
+                                        fontWeight: 900,
+                                        minWidth: "20px",
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    {suggestedTasks.length}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* ── Agent Decision Section (always visible) ──────────────── */}
             <SectionCard
                 style={{
                     background: decisionVisual.gradient,
@@ -1842,7 +1928,8 @@ export default function TenderDetailsPage() {
                 </div>
             </SectionCard>
 
-            {submissionGate && (
+            {/* ══ TAB: بوابة التقديم ══════════════════════════════════ */}
+            {activeTab === "gate" && submissionGate && (
                 <SectionCard
                     style={{
                         border: submissionGate.can_submit
@@ -2225,9 +2312,11 @@ export default function TenderDetailsPage() {
                 </SectionCard>
             )}
 
-            <CompanyResourceIntelligence />
+            {/* ══ TAB: موارد الشركة ══════════════════════════════════════ */}
+            {activeTab === "resources" && <CompanyResourceIntelligence />}
 
-            <section
+            {/* ══ TAB: نظرة عامة ═══════════════════════════════════════ */}
+            {activeTab === "overview" && <section
                 style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
@@ -2265,9 +2354,9 @@ export default function TenderDetailsPage() {
                     helper="ضمن مساحة المنافسة"
                     accent={COLORS.orange}
                 />
-            </section>
+            </section>}
 
-            <SectionCard>
+            {activeTab === "overview" && <SectionCard>
                 <SectionHeader title="معلومات المنافسة" subtitle="البيانات الأساسية التي يبني عليها الوكيل قرار الدخول." />
 
                 <div
@@ -2306,9 +2395,11 @@ export default function TenderDetailsPage() {
                         </div>
                     ))}
                 </div>
-            </SectionCard>
+            </SectionCard>}
 
-            {documentsCoverageSummary && (
+            {/* ══ TAB: نظرة عامة — internal readiness (shown below docs matrix) ══ */}
+            {/* ══ TAB: مصفوفة الأدلة ════════════════════════════════════ */}
+            {activeTab === "evidence" && documentsCoverageSummary && (
                 <SectionCard>
                     <SectionHeader
                         title="مصفوفة التحكم في الأدلة"
@@ -2478,7 +2569,8 @@ export default function TenderDetailsPage() {
                 </SectionCard>
             )}
 
-            <SectionCard>
+            {/* ══ TAB: المستندات ═══════════════════════════════════════ */}
+            {activeTab === "documents" && <SectionCard>
                 <SectionHeader
                     title="مستندات المنافسة"
                     subtitle="رفع المستندات، استخراج النص، تحليل التغطية، ثم إنشاء مهام تنفيذية من الفجوات."
@@ -2768,9 +2860,10 @@ export default function TenderDetailsPage() {
                         })}
                     </div>
                 )}
-            </SectionCard>
+            </SectionCard>}
 
-            {analysis && (
+            {/* ══ TAB: نظرة عامة — internal readiness analysis ══════════ */}
+            {activeTab === "overview" && analysis && (
                 <SectionCard>
                     <SectionHeader
                         title="تحليل الوكيل للجاهزية الداخلية"
@@ -2806,7 +2899,8 @@ export default function TenderDetailsPage() {
                 </SectionCard>
             )}
 
-            <SectionCard>
+            {/* ══ TAB: مهام الفجوات ══════════════════════════════════════ */}
+            {activeTab === "tasks" && <SectionCard>
                 <SectionHeader
                     title="المهام المقترحة من الوكيل"
                     subtitle="مهام يتم توليدها من المتطلبات غير المغطاة أو المغطاة جزئيًا."
@@ -2894,9 +2988,10 @@ export default function TenderDetailsPage() {
                         ))}
                     </div>
                 )}
-            </SectionCard>
+            </SectionCard>}
 
-            <SectionCard>
+            {/* ══ TAB: مصفوفة الأدلة — requirements list ════════════════ */}
+            {activeTab === "evidence" && <SectionCard>
                 <SectionHeader
                     title="المتطلبات"
                     subtitle="قائمة المتطلبات الأساسية المرتبطة بهذه المنافسة."
@@ -2943,7 +3038,7 @@ export default function TenderDetailsPage() {
                         </div>
                     ))}
                 </div>
-            </SectionCard>
+            </SectionCard>}
         </main>
     );
 }   
