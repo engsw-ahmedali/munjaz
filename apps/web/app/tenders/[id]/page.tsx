@@ -656,6 +656,203 @@ function buildDecisionGate(
     };
 }
 
+type AgentWorkflowStepperProps = {
+    documentsCount: number;
+    requirementsCount: number;
+    resourceGate: CompanyResourceGate | null;
+    documentsCoverageSummary: DocumentsCoverageSummary | null;
+    suggestedTasksCount: number;
+    submissionGate: SubmissionGate | null;
+};
+
+function AgentWorkflowStepper({
+    documentsCount,
+    requirementsCount,
+    resourceGate,
+    documentsCoverageSummary,
+    suggestedTasksCount,
+    submissionGate,
+}: AgentWorkflowStepperProps) {
+    const steps: { label: string; done: boolean; active: boolean }[] = [
+        {
+            label: "قراءة الكراسة",
+            done: documentsCount > 0,
+            active: documentsCount === 0,
+        },
+        {
+            label: "استخراج المتطلبات",
+            done: requirementsCount > 0,
+            active: documentsCount > 0 && requirementsCount === 0,
+        },
+        {
+            label: "مطابقة الموارد",
+            done: resourceGate !== null,
+            active: requirementsCount > 0 && resourceGate === null,
+        },
+        {
+            label: "تحليل الأدلة",
+            done: documentsCoverageSummary !== null,
+            active: resourceGate !== null && documentsCoverageSummary === null,
+        },
+        {
+            label: "توليد مهام الفجوات",
+            done: suggestedTasksCount > 0,
+            active: documentsCoverageSummary !== null && suggestedTasksCount === 0,
+        },
+        {
+            label: "بوابة التقديم",
+            done: submissionGate?.can_submit === true,
+            active: suggestedTasksCount > 0 && submissionGate?.can_submit !== true,
+        },
+    ];
+
+    return (
+        <div
+            style={{
+                background: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "18px",
+                padding: "14px 20px",
+                marginBottom: "14px",
+                boxShadow: "0 8px 22px rgba(15,23,42,0.035)",
+                display: "flex",
+                alignItems: "center",
+                gap: "0",
+                overflowX: "auto",
+            }}
+        >
+            <span
+                style={{
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    color: "#94a3b8",
+                    whiteSpace: "nowrap",
+                    marginLeft: "14px",
+                    paddingLeft: "14px",
+                    borderLeft: "1px solid #e5e7eb",
+                    letterSpacing: "0.04em",
+                }}
+            >
+                سير عمل الوكيل
+            </span>
+
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0",
+                    flex: 1,
+                }}
+            >
+                {steps.map((step, idx) => (
+                    <div
+                        key={step.label}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            flex: 1,
+                            minWidth: 0,
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "7px",
+                                padding: "7px 11px",
+                                borderRadius: "999px",
+                                background: step.done
+                                    ? "rgba(89,186,71,0.10)"
+                                    : step.active
+                                    ? "rgba(37,99,235,0.09)"
+                                    : "transparent",
+                                border: step.done
+                                    ? "1px solid rgba(89,186,71,0.30)"
+                                    : step.active
+                                    ? "1px solid rgba(37,99,235,0.22)"
+                                    : "1px solid transparent",
+                                whiteSpace: "nowrap",
+                            }}
+                        >
+                            <span
+                                style={{
+                                    width: "16px",
+                                    height: "16px",
+                                    borderRadius: "999px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "10px",
+                                    fontWeight: 900,
+                                    background: step.done
+                                        ? "#59BA47"
+                                        : step.active
+                                        ? "#2563eb"
+                                        : "#e5e7eb",
+                                    color: step.done || step.active ? "white" : "#94a3b8",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                {step.done ? "✓" : idx + 1}
+                            </span>
+                            <span
+                                style={{
+                                    fontSize: "12px",
+                                    fontWeight: 800,
+                                    color: step.done
+                                        ? "#2d7a1e"
+                                        : step.active
+                                        ? "#1d4ed8"
+                                        : "#94a3b8",
+                                }}
+                            >
+                                {step.label}
+                            </span>
+                        </div>
+
+                        {idx < steps.length - 1 && (
+                            <div
+                                style={{
+                                    flex: 1,
+                                    height: "1px",
+                                    background: step.done
+                                        ? "#59BA47"
+                                        : "#e5e7eb",
+                                    minWidth: "8px",
+                                    opacity: step.done ? 0.5 : 1,
+                                }}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function MiniStatPill({ label, value }: { label: string; value: string }) {
+    return (
+        <span
+            style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                borderRadius: "999px",
+                background: "rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                fontSize: "12px",
+                fontWeight: 800,
+                color: "rgba(255,255,255,0.90)",
+                whiteSpace: "nowrap",
+            }}
+        >
+            <strong style={{ fontSize: "14px" }}>{value}</strong>
+            {label}
+        </span>
+    );
+}
+
 function Badge({
     children,
     style,
@@ -1300,63 +1497,135 @@ export default function TenderDetailsPage() {
 
     return (
         <main dir="rtl" style={{ color: COLORS.navy }}>
-            <SectionCard
+
+            {/* ── Agent Command Center Header ──────────────────────────── */}
+            <div
                 style={{
-                    background:
-                        "linear-gradient(135deg, #ffffff 0%, #f8fafc 52%, #eef2ff 100%)",
-                    padding: "26px",
+                    background: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "22px",
+                    padding: "20px 24px",
+                    marginBottom: "14px",
+                    boxShadow: "0 10px 28px rgba(15,23,42,0.045)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "18px",
+                    flexWrap: "wrap",
+                    position: "relative",
+                    overflow: "hidden",
                 }}
             >
+                {/* Left green accent stripe */}
                 <div
                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "18px",
-                        alignItems: "flex-start",
-                        flexWrap: "wrap",
+                        position: "absolute",
+                        insetInlineEnd: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: "5px",
+                        background: "#59BA47",
+                        borderRadius: "0 22px 22px 0",
                     }}
-                >
-                    <div>
+                />
+
+                <div style={{ display: "grid", gap: "8px", flex: 1, minWidth: 0 }}>
+                    {/* Eyebrow */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <span
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                padding: "5px 11px",
+                                borderRadius: "999px",
+                                background: "rgba(89,186,71,0.10)",
+                                color: "#2d7a1e",
+                                border: "1px solid rgba(89,186,71,0.28)",
+                                fontSize: "11px",
+                                fontWeight: 900,
+                                letterSpacing: "0.02em",
+                            }}
+                        >
+                            <span
+                                style={{
+                                    width: "6px",
+                                    height: "6px",
+                                    borderRadius: "999px",
+                                    background: "#59BA47",
+                                    display: "inline-block",
+                                }}
+                            />
+                            وكيل تحليل المنافسات · نشط
+                        </span>
+
                         <Badge
                             style={{
-                                background: "#eff6ff",
-                                color: "#1d4ed8",
-                                border: "1px solid #bfdbfe",
+                                background: translateStatus(tender.status) === "قيد المراجعة" ? "#f8fafc" :
+                                    translateStatus(tender.status) === "التجهيز للتقديم" ? "#eff6ff" :
+                                    translateStatus(tender.status) === "جاهز للتقديم" ? "#ecfdf5" :
+                                    "#fff7ed",
+                                color: translateStatus(tender.status) === "قيد المراجعة" ? "#475569" :
+                                    translateStatus(tender.status) === "التجهيز للتقديم" ? "#1d4ed8" :
+                                    translateStatus(tender.status) === "جاهز للتقديم" ? "#065f46" :
+                                    "#9a3412",
+                                border: "1px solid #e2e8f0",
                             }}
                         >
-                            مركز قيادة المنافسات
+                            {translateStatus(tender.status)}
                         </Badge>
-
-                        <h1
-                            style={{
-                                margin: "14px 0 8px",
-                                fontSize: "32px",
-                                lineHeight: 1.35,
-                                letterSpacing: "-0.03em",
-                            }}
-                        >
-                            {tender.title}
-                        </h1>
-
-                        <p
-                            style={{
-                                margin: 0,
-                                color: COLORS.muted,
-                                lineHeight: 1.9,
-                                maxWidth: "900px",
-                            }}
-                        >
-                            مساحة عمل ذكية تربط قرار الدخول بالمتطلبات، المستندات، الأدلة،
-                            والفجوات التنفيذية.
-                        </p>
                     </div>
 
-                    <PrimaryButton onClick={loadTenderData} tone="navy">
-                        تحديث المركز
-                    </PrimaryButton>
-                </div>
-            </SectionCard>
+                    {/* Title */}
+                    <h1
+                        style={{
+                            margin: 0,
+                            fontSize: "26px",
+                            lineHeight: 1.35,
+                            letterSpacing: "-0.03em",
+                            color: "#232122",
+                            fontWeight: 900,
+                        }}
+                    >
+                        {tender.title}
+                    </h1>
 
+                    {/* Agency + Deadline row */}
+                    <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", alignItems: "center" }}>
+                        {tender.client && (
+                            <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
+                                الجهة: {tender.client}
+                            </span>
+                        )}
+                        {tender.submission_deadline && (
+                            <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
+                                آخر موعد: {tender.submission_deadline.slice(0, 10)}
+                            </span>
+                        )}
+                        <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
+                            الجاهزية: <strong style={{ color: decisionInternalReadinessScore >= 80 ? "#059669" : decisionInternalReadinessScore >= 50 ? "#b45309" : "#dc2626" }}>
+                                {decisionInternalReadinessScore}%
+                            </strong>
+                        </span>
+                    </div>
+                </div>
+
+                <PrimaryButton onClick={loadTenderData} tone="light">
+                    تحديث المركز
+                </PrimaryButton>
+            </div>
+
+            {/* ── Agent Workflow Stepper ───────────────────────────────── */}
+            <AgentWorkflowStepper
+                documentsCount={displayDocumentsCount}
+                requirementsCount={requirements.length}
+                resourceGate={resourceGate}
+                documentsCoverageSummary={documentsCoverageSummary}
+                suggestedTasksCount={suggestedTasks.length}
+                submissionGate={submissionGate}
+            />
+
+            {/* ── Agent Decision Section ───────────────────────────────── */}
             <SectionCard
                 style={{
                     background: decisionVisual.gradient,
@@ -1378,6 +1647,18 @@ export default function TenderDetailsPage() {
                     }}
                 />
 
+                {/* Subtle dot-grid texture */}
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        opacity: 0.06,
+                        backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
+                        backgroundSize: "22px 22px",
+                        pointerEvents: "none",
+                    }}
+                />
+
                 <div
                     style={{
                         display: "grid",
@@ -1387,19 +1668,31 @@ export default function TenderDetailsPage() {
                     }}
                 >
                     <div>
-                        <Badge
-                            style={{
-                                background: "rgba(255,255,255,0.16)",
-                                color: "white",
-                                border: "1px solid rgba(255,255,255,0.24)",
-                            }}
-                        >
-                            مركز قرار المنافسة
-                        </Badge>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
+                            <Badge
+                                style={{
+                                    background: "rgba(255,255,255,0.16)",
+                                    color: "white",
+                                    border: "1px solid rgba(255,255,255,0.24)",
+                                }}
+                            >
+                                مركز قرار المنافسة
+                            </Badge>
+                            <Badge
+                                style={{
+                                    background: "rgba(255,255,255,0.12)",
+                                    color: "rgba(255,255,255,0.85)",
+                                    border: "1px solid rgba(255,255,255,0.18)",
+                                    fontSize: "11px",
+                                }}
+                            >
+                                {decisionVisual.label}
+                            </Badge>
+                        </div>
 
                         <h2
                             style={{
-                                margin: "18px 0 8px",
+                                margin: "16px 0 8px",
                                 fontSize: "38px",
                                 lineHeight: 1.25,
                                 letterSpacing: "-0.04em",
@@ -1442,6 +1735,20 @@ export default function TenderDetailsPage() {
                             <p style={{ margin: 0, lineHeight: 1.9, fontWeight: 800 }}>
                                 {decisionGate.nextAction}
                             </p>
+                        </div>
+
+                        {/* Quick stats row */}
+                        <div
+                            style={{
+                                marginTop: "14px",
+                                display: "flex",
+                                gap: "10px",
+                                flexWrap: "wrap",
+                            }}
+                        >
+                            <MiniStatPill label="متطلبات مغطاة" value={String(displayCoveredCount)} />
+                            <MiniStatPill label="فجوات مكتشفة" value={String(displayUncoveredCount)} />
+                            <MiniStatPill label="مستندات" value={String(displayDocumentsCount)} />
                         </div>
                     </div>
 
@@ -1510,6 +1817,26 @@ export default function TenderDetailsPage() {
                                     color="#fde68a"
                                 />
                             </div>
+
+                            {resourceGate && (
+                                <div>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            marginBottom: "8px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        <span>مطابقة موارد الشركة</span>
+                                        <span>{resourceReadinessScore}%</span>
+                                    </div>
+                                    <ProgressBar
+                                        value={resourceReadinessScore}
+                                        color="rgba(255,255,255,0.55)"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
