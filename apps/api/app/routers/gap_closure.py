@@ -453,74 +453,496 @@ def tokenize_for_matching(text: str) -> set[str]:
     return {word for word in words if len(word) >= 3 and word not in stop_words}
 
 
+import json
+import os
+import urllib.request
+import urllib.error
+
+def _call_llm_verification(task_context: dict, expected_type: str, evidence_context: dict, uploaded_type: str) -> dict:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return {}
+    
+    model = os.environ.get("OPENAI_MODEL") or os.environ.get("LLM_MODEL") or "gpt-4o-mini"
+    
+    system_prompt = """You are a strict tender evidence verification agent. You decide whether uploaded evidence actually proves a specific tender task requirement. You must not accept evidence because of superficial keyword overlap. You evaluate semantic proof, completeness, relevance, and evidence type fit. Return JSON only.
+
+Expected JSON format:
+{
+  "decision": "accepted" | "review" | "rejected",
+  "verification_score": number (0-100),
+  "verification_reason": "Arabic explanation",
+  "matched_indicators": ["..."],
+  "missing_items": ["..."],
+  "recommended_action": "Arabic recommendation",
+  "evidence_type_fit": "match" | "partial" | "mismatch" | "unknown",
+  "semantic_fit": "strong" | "medium" | "weak" | "none",
+  "direct_proof": boolean
+}"""
+
+    user_prompt = f"""
+A) Task Packet:
+{json.dumps(task_context, ensure_ascii=False, indent=2)}
+
+B) Expected Evidence Type:
+{expected_type}
+
+C) Evidence Packet:
+{json.dumps(evidence_context, ensure_ascii=False, indent=2)}
+
+D) Uploaded Evidence Type:
+{uploaded_type}
+
+E) Decision Criteria:
+- accepted: Evidence directly proves the required task, includes the expected evidence type, and is specific enough for tender submission.
+- review: Evidence is relevant but incomplete, generic, ambiguous, or needs human confirmation.
+- rejected: Evidence is unrelated, wrong evidence type, too generic, too short, or does not prove the requested requirement.
+
+Examples:
+- Task asks for operation and maintenance plan and evidence is ISO 27001 certificate => rejected.
+- Task asks for ISO 27001 certificate and evidence is ISO 27001 certificate => accepted if valid.
+- Task asks for FAT/SAT testing plan and evidence is a generic project plan => review or rejected depending on evidence.
+- Task asks for training plan and evidence is an attendance sheet with relevant training details => accepted or review depending on completeness.
+"""
+    
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.1
+    }
+    
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            content = result["choices"][0]["message"]["content"]
+            parsed = json.loads(content)
+            
+            direct_proof = parsed.get("direct_proof", False)
+            if isinstance(direct_proof, str):
+                direct_proof = direct_proof.lower() in ("true", "yes", "1")
+            parsed["direct_proof"] = direct_proof
+            
+            return parsed
+    except Exception as e:
+        print(f"LLM verification failed: {e}")
+        return {}
+
+
+def normalize_text(text: str) -> str:
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', ' ', text)
+    text = re.sub(r'[أإآ]', 'ا', text)
+    text = text.replace('ة', 'ه')
+    text = text.replace('ى', 'ي')
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
+def build_task_packet(task: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "tender_title": task.get("tender_title") or "",
+        "tender_agency": task.get("tender_agency") or "",
+        "task_title": task.get("title") or "",
+        "task_description": task.get("description") or "",
+        "required_evidence": task.get("evidence_instruction") or "",
+        "evidence_type": task.get("evidence_type") or "",
+        "category": task.get("category") or "",
+        "requirement_text": task.get("requirement_title") or "",
+    }
+
+
+def build_evidence_packet(evidence: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "filename": evidence.get("original_filename") or "",
+        "extracted_text": str(evidence.get("extracted_text") or "")[:3000],
+        "evidence_note": evidence.get("evidence_note") or "",
+        "file_type": evidence.get("content_type") or evidence.get("mime_type") or "",
+        "file_size": evidence.get("file_size") or 0,
+    }
+
+
+EVIDENCE_TYPE_KEYWORDS: dict[str, list[str]] = {
+    "operation_maintenance_plan": [
+        "تشغيل وصيانة", "خطة تشغيل", "خطة صيانة", "دعم بعد التسليم", "خدمات الدعم",
+        "اتفاقية مستوى الخدمة", "اوقات الاستجابة", "الصيانة الوقائية", "الصيانة التصحيحية",
+        "الية التصعيد", "تقارير الاداء", "operation", "maintenance", "o&m", "sla",
+        "support plan", "preventive maintenance", "corrective maintenance", "response time",
+        "escalation", "post handover",
+    ],
+    "testing_commissioning_plan": [
+        "fat", "sat", "اختبار قبول", "اختبار وتشغيل", "خطة الاختبار", "تشغيل تجريبي",
+        "testing", "commissioning", "acceptance test", "test plan",
+    ],
+    "training_plan_or_record": [
+        "تدريب", "خطة تدريب", "سجل حضور", "تدريب المستخدمين", "training", "trainees",
+        "attendance", "training plan", "training record",
+    ],
+    "iso_or_compliance_certificate": [
+        "iso 27001", "iso/iec 27001", "isms", "شهادة iso", "شهادة ايزو", "شهادة امتثال",
+        "شهادة امن معلومات", "امن معلومات", "information security", "certificate",
+        "compliance certificate", "certified", "certification", "management system",
+    ],
+    "manufacturer_authorization_letter": [
+        "خطاب تفويض", "خطاب مصنع", "تفويض مصنع", "اعتماد مصنع", "المصنع", "المورد",
+        "authorization letter", "manufacturer letter", "vendor letter", "authorized partner",
+        "authorized distributor",
+    ],
+    "product_list_or_datasheet": [
+        "قائمة المنتجات", "نشرة فنية", "بيانات فنية", "موديل", "بلد المنشأ", "رقم القطعة",
+        "model", "datasheet", "data sheet", "country of origin", "part number", "specification",
+    ],
+    "project_experience_reference": [
+        "خبرة", "سابقة اعمال", "مشاريع سابقة", "شهادة انجاز", "خطاب انجاز", "experience",
+        "reference", "past performance", "completion certificate", "project reference",
+    ],
+    "risk_management_plan": [
+        "مخاطر", "ادارة المخاطر", "خطة المخاطر", "risk", "risk management", "risk register",
+    ],
+    "implementation_methodology_plan": [
+        "منهجية", "خطة تنفيذ", "الية التنفيذ", "برنامج العمل", "methodology",
+        "implementation plan", "execution plan", "work plan",
+    ],
+    "financial_or_schedule_plan": [
+        "مالي", "جدول زمني", "تدفق نقدي", "برنامج زمني", "financial", "schedule",
+        "gantt", "cash flow", "timeline",
+    ],
+    "integration_plan": [
+        "تكامل", "ربط", "خطة التكامل", "integration", "interface", "api integration",
+    ],
+    "cybersecurity_compliance_plan": [
+        "امن سيبراني", "الامن السيبراني", "ضوابط الامن السيبراني", "nca", "ecc",
+        "cybersecurity", "cyber security", "nca compliance",
+    ],
+}
+
+
+STRONG_DIRECT_INDICATORS: dict[str, list[str]] = {
+    "operation_maintenance_plan": [
+        "sla", "اتفاقية مستوى الخدمة", "اوقات الاستجابة", "الصيانة الوقائية", "الصيانة التصحيحية",
+        "الية التصعيد", "فريق الدعم", "جدول الزيارات", "تقارير الاداء", "مدة سنة", "بعد التسليم",
+    ],
+    "testing_commissioning_plan": ["fat", "sat", "اختبار قبول", "محاضر الاختبار", "نتائج الاختبار", "commissioning"],
+    "training_plan_or_record": ["خطة تدريب", "سجل حضور", "المتدربين", "محتوى التدريب", "training record"],
+    "iso_or_compliance_certificate": ["iso 27001", "iso/iec 27001", "isms", "certificate", "شهادة"],
+    "manufacturer_authorization_letter": ["خطاب تفويض", "authorized", "manufacturer", "المصنع"],
+    "product_list_or_datasheet": ["datasheet", "part number", "model", "المواصفات الفنية", "رقم القطعة"],
+    "project_experience_reference": ["شهادة انجاز", "سابقة اعمال", "completion certificate", "project reference"],
+    "risk_management_plan": ["سجل المخاطر", "risk register", "خطة الاستجابة", "mitigation"],
+    "implementation_methodology_plan": ["منهجية التنفيذ", "خطة تنفيذ", "مراحل التنفيذ", "المخرجات"],
+    "financial_or_schedule_plan": ["جدول زمني", "gantt", "cash flow", "تدفق نقدي", "مدة"],
+    "integration_plan": ["خطة التكامل", "واجهات الربط", "api", "integration"],
+    "cybersecurity_compliance_plan": ["nca", "ecc", "ضوابط", "امن سيبراني", "cybersecurity"],
+}
+
+
+def _count_keyword_hits(text_norm: str, keywords: list[str]) -> int:
+    padded = f" {text_norm} "
+    hits = 0
+    for keyword in keywords:
+        keyword_norm = normalize_text(keyword)
+        if keyword_norm and f" {keyword_norm} " in padded:
+            hits += 1
+    return hits
+
+
+def classify_expected_evidence_type(text_norm: str) -> str:
+    best_type = "unknown"
+    best_score = 0
+
+    for type_id, keywords in EVIDENCE_TYPE_KEYWORDS.items():
+        score = _count_keyword_hits(text_norm, keywords)
+        if score > best_score:
+            best_score = score
+            best_type = type_id
+
+    return best_type if best_score > 0 else "unknown"
+
+
+def classify_uploaded_evidence_type(evidence: dict[str, Any]) -> str:
+    """
+    Classify uploaded evidence from the actual extracted content first.
+    The filename is only a weak last fallback because filenames often contain task words
+    such as "maintenance" even when the document content is unrelated.
+    """
+    extracted_text_norm = normalize_text(str(evidence.get("extracted_text") or ""))
+    evidence_note_norm = normalize_text(str(evidence.get("evidence_note") or ""))
+    filename_norm = normalize_text(str(evidence.get("original_filename") or ""))
+
+    primary_text = extracted_text_norm
+    if len(primary_text) >= 30:
+        classified = classify_expected_evidence_type(primary_text)
+        if classified != "unknown":
+            return classified
+
+    secondary_text = normalize_text(f"{extracted_text_norm} {evidence_note_norm}")
+    if len(secondary_text) >= 30:
+        classified = classify_expected_evidence_type(secondary_text)
+        if classified != "unknown":
+            return classified
+
+    # Weak fallback only when there is no useful extracted text/note.
+    if len(secondary_text) < 30:
+        return classify_expected_evidence_type(filename_norm)
+
+    return "unknown"
+
+
+def evaluate_with_llm(task_pkg: dict[str, Any], expected_type: str, evidence_pkg: dict[str, Any], uploaded_type: str) -> dict[str, Any]:
+    return _call_llm_verification(task_pkg, expected_type, evidence_pkg, uploaded_type)
+
+
+def deterministic_fallback_evaluation(expected_type: str, uploaded_type: str, evidence_pkg: dict[str, Any]) -> dict[str, Any]:
+    score = 50
+    decision = "review"
+    evidence_type_fit = "unknown"
+    semantic_fit = "weak"
+    direct_proof = False
+    matched_indicators: list[str] = []
+    missing_items: list[str] = []
+    final_reason = "لم يتم تشغيل التقييم الدلالي عبر LLM، لذلك تم استخدام تحقق محافظ يستلزم مراجعة بشرية."
+    recommended_action = "راجع الدليل يدويًا أو فعّل مفتاح LLM للحصول على تحقق دلالي أدق."
+
+    has_file = int(evidence_pkg.get("file_size") or 0) > 0
+    extracted_text = str(evidence_pkg.get("extracted_text") or "")
+    evidence_note = str(evidence_pkg.get("evidence_note") or "")
+    evidence_norm = normalize_text(f"{extracted_text} {evidence_note}")
+
+    if len(evidence_norm) < 30 and not has_file:
+        return {
+            "decision": "rejected",
+            "verification_score": 20,
+            "verification_reason": "محتوى الدليل قصير جدًا أو فارغ، ولا يوجد ملف مرفق يمكن الاعتماد عليه.",
+            "recommended_action": "ارفع دليلًا كاملًا يثبت المتطلب المطلوب بشكل مباشر.",
+            "matched_indicators": [],
+            "missing_items": ["محتوى دليل كافٍ", "ملف مرفق قابل للتحقق"],
+            "evidence_type_fit": "unknown",
+            "semantic_fit": "none",
+            "direct_proof": False,
+        }
+
+    if expected_type != "unknown" and uploaded_type != "unknown" and expected_type != uploaded_type:
+        return {
+            "decision": "rejected",
+            "verification_score": 25,
+            "verification_reason": f"الدليل المرفوع لا يطابق نوع الدليل المطلوب. المطلوب هو ({expected_type}) بينما الدليل المرفوع يبدو من نوع ({uploaded_type})، لذلك لا يثبت المهمة بشكل مباشر.",
+            "recommended_action": "ارفع دليلًا من النوع المطلوب يثبت المتطلب مباشرة، وليس مستندًا عامًا أو مختلف الغرض.",
+            "matched_indicators": [],
+            "missing_items": [f"دليل من نوع {expected_type}", "إثبات مباشر للمتطلب"],
+            "evidence_type_fit": "mismatch",
+            "semantic_fit": "none",
+            "direct_proof": False,
+        }
+
+    if expected_type != "unknown" and uploaded_type == expected_type:
+        indicators = STRONG_DIRECT_INDICATORS.get(expected_type, [])
+        matched_indicators = [indicator for indicator in indicators if normalize_text(indicator) in evidence_norm]
+
+        if len(matched_indicators) >= 4:
+            decision = "accepted"
+            score = 88
+            evidence_type_fit = "match"
+            semantic_fit = "strong"
+            direct_proof = True
+            final_reason = "الدليل يطابق نوع الدليل المطلوب ويحتوي على مؤشرات مباشرة وكافية لإثبات المهمة."
+            recommended_action = "يمكن اعتماد الدليل، مع إبقاء المراجعة البشرية متاحة عند الحاجة."
+        elif len(matched_indicators) >= 2:
+            decision = "review"
+            score = 72
+            evidence_type_fit = "match"
+            semantic_fit = "medium"
+            direct_proof = False
+            final_reason = "الدليل يطابق نوع الدليل المطلوب جزئيًا، لكنه يحتاج مراجعة بشرية للتأكد من الاكتمال والتخصيص للمنافسة."
+            recommended_action = "راجع اكتمال الدليل، وتأكد من أنه مخصص للمنافسة ويغطي جميع عناصر المتطلب."
+        else:
+            decision = "review"
+            score = 58
+            evidence_type_fit = "partial"
+            semantic_fit = "weak"
+            direct_proof = False
+            final_reason = "الدليل قريب من نوع الدليل المطلوب، لكن المؤشرات المباشرة غير كافية للإغلاق التلقائي."
+            recommended_action = "أضف تفاصيل أو مستندات أكثر وضوحًا تثبت المتطلب بشكل مباشر."
+            missing_items = ["مؤشرات مباشرة كافية", "تفاصيل تثبت اكتمال المتطلب"]
+
+    return {
+        "decision": decision,
+        "verification_score": score,
+        "verification_reason": final_reason,
+        "recommended_action": recommended_action,
+        "matched_indicators": matched_indicators,
+        "missing_items": missing_items,
+        "evidence_type_fit": evidence_type_fit,
+        "semantic_fit": semantic_fit,
+        "direct_proof": direct_proof,
+    }
+
+
+def apply_guardrails(
+    decision: str,
+    score: float,
+    direct_proof: bool,
+    evidence_type_fit: str,
+    semantic_fit: str,
+    expected_type: str,
+    uploaded_type: str,
+    evidence_pkg: dict[str, Any],
+) -> tuple[str, float]:
+    decision = decision if decision in {"accepted", "review", "rejected"} else "review"
+    evidence_type_fit = evidence_type_fit if evidence_type_fit in {"match", "partial", "mismatch", "unknown"} else "unknown"
+    semantic_fit = semantic_fit if semantic_fit in {"strong", "medium", "weak", "none"} else "none"
+
+    has_file = int(evidence_pkg.get("file_size") or 0) > 0
+    extracted_text = str(evidence_pkg.get("extracted_text") or "")
+    evidence_note = str(evidence_pkg.get("evidence_note") or "")
+
+    if len(normalize_text(f"{extracted_text} {evidence_note}")) < 30 and not has_file:
+        decision = "rejected"
+        score = min(score, 20)
+
+    # General type-mismatch guardrail: any known mismatch cannot close the task.
+    if expected_type != "unknown" and uploaded_type != "unknown" and expected_type != uploaded_type:
+        direct_proof = False
+        evidence_type_fit = "mismatch"
+        if decision == "accepted":
+            decision = "review"
+        if semantic_fit in ("weak", "none") or score < 85:
+            decision = "rejected"
+            score = min(score, 49)
+
+    if evidence_type_fit == "mismatch":
+        direct_proof = False
+        if decision == "accepted":
+            decision = "review"
+        if semantic_fit in ("weak", "none"):
+            decision = "rejected"
+            score = min(score, 49)
+
+    if uploaded_type == "project_experience_reference" and expected_type in (
+        "operation_maintenance_plan",
+        "testing_commissioning_plan",
+        "training_plan_or_record",
+        "iso_or_compliance_certificate",
+    ):
+        if decision == "accepted":
+            decision = "review"
+            score = min(score, 84)
+
+    if decision == "accepted":
+        if not (direct_proof and evidence_type_fit in ("match", "partial") and semantic_fit == "strong"):
+            decision = "review"
+            score = min(score, 84)
+
+    if decision == "accepted":
+        score = max(85, min(100, score))
+    elif decision == "review":
+        score = max(50, min(84, score))
+    else:
+        decision = "rejected"
+        score = max(0, min(49, score))
+
+    return decision, score
+
+
+def normalize_final_decision(decision: str, score: float, llm_result: dict[str, Any]) -> dict[str, Any]:
+    if decision == "accepted":
+        verification_status = "ACCEPTED"
+        task_status = "CLOSED"
+        decision_ar = "مقبول"
+    elif decision == "review":
+        verification_status = "REJECTED"
+        task_status = "WAITING_REVIEW"
+        decision_ar = "يستلزم مراجعة"
+    else:
+        verification_status = "REJECTED"
+        task_status = "OPEN"
+        decision_ar = "مرفوض"
+
+    reasoning_list = []
+    if llm_result.get("verification_reason"):
+        reasoning_list.append(llm_result.get("verification_reason"))
+
+    return {
+        "verification_status": verification_status,
+        "task_status": task_status,
+        "verification_score": int(score),
+        "verification_reason": llm_result.get("verification_reason") or "تم التقييم باستخدام وكيل التحقق من الأدلة.",
+        "decision": decision_ar,
+        "matched_indicators": llm_result.get("matched_indicators") or [],
+        "missing_items": llm_result.get("missing_items") or [],
+        "reasoning": reasoning_list,
+        "recommended_action": llm_result.get("recommended_action") or "يرجى مراجعة الدليل المرفوع.",
+        "manager_approval_required": False,
+    }
+
+
 def verify_evidence_against_task(task: dict[str, Any], evidence: dict[str, Any]) -> dict[str, Any]:
-    extracted_text = evidence.get("extracted_text") or ""
-    evidence_note = evidence.get("evidence_note") or ""
-    task_text = " ".join([
+    task_parts = [
+        str(task.get("title") or ""),
+        str(task.get("description") or ""),
         str(task.get("requirement_title") or ""),
         str(task.get("evidence_type") or ""),
         str(task.get("evidence_instruction") or ""),
-    ])
+        str(task.get("category") or ""),
+    ]
+    task_context_norm = normalize_text(" ".join(task_parts))
 
-    combined_text = f"{extracted_text}\n{evidence_note}".strip()
-    matched_terms = sorted(list(tokenize_for_matching(task_text).intersection(tokenize_for_matching(combined_text))))
+    expected_type = classify_expected_evidence_type(task_context_norm)
+    uploaded_type = classify_uploaded_evidence_type(evidence)
 
-    score = 0
-    reasons: list[str] = []
+    print(f"[EvidenceAgent] expected_type={expected_type} uploaded_type={uploaded_type}")
 
-    has_file = int(evidence.get("file_size") or 0) > 0
-    
-    if has_file:
-        score += 20
-        reasons.append("يوجد ملف مرفق.")
+    task_pkg = build_task_packet(task)
+    evidence_pkg = build_evidence_packet(evidence)
 
-    if len(combined_text) >= 50:
-        score += 20
-        reasons.append("محتوى الدليل ذو طول كافٍ للمراجعة.")
-    elif len(combined_text) > 0:
-        score += 5
-        reasons.append("محتوى الدليل قصير جداً.")
+    llm_result = evaluate_with_llm(task_pkg, expected_type, evidence_pkg, uploaded_type)
+    mode = "LLM" if llm_result else "Fallback"
 
-    if matched_terms:
-        score += min(60, len(matched_terms) * 15)
-        reasons.append(f"توجد مؤشرات مطابقة للمتطلب: {', '.join(matched_terms[:6])}.")
+    if not llm_result:
+        llm_result = deterministic_fallback_evaluation(expected_type, uploaded_type, evidence_pkg)
 
-    missing_items: list[str] = []
-    if not has_file:
-        missing_items.append("ملف دليل فعلي")
-    if len(combined_text) < 50:
-        missing_items.append("محتوى تفصيلي كافٍ للمراجعة")
-    if len(matched_terms) < 3:
-        missing_items.append("مؤشرات فنية أو كلمات مفتاحية مطابقة لمتطلبات المهمة")
+    decision = str(llm_result.get("decision", "review")).lower()
+    try:
+        score = float(llm_result.get("verification_score", 50))
+    except Exception:
+        score = 50
 
-    # Hard rules to prevent false acceptances of weak generic evidence
-    if len(matched_terms) < 3:
-        score = min(score, 55)
-    if len(combined_text) < 50:
-        score = min(score, 55)
-
-    if score >= 75:
-        recommended_action = "يمكن إغلاق هذه الفجوة. تأكد من حفظ الدليل في سجل التسليم النهائي."
-        decision = "مقبول"
-    elif score >= 40:
-        recommended_action = "الدليل جزئي أو عام. يُنصح برفع دليل فني مفصل يوضح الامتثال الدقيق للمتطلب."
-        decision = "يستلزم مراجعة"
+    evidence_type_fit = str(llm_result.get("evidence_type_fit", "unknown")).lower()
+    semantic_fit = str(llm_result.get("semantic_fit", "none")).lower()
+    direct_proof_raw = llm_result.get("direct_proof", False)
+    if isinstance(direct_proof_raw, str):
+        direct_proof = direct_proof_raw.strip().lower() in {"true", "yes", "1"}
     else:
-        recommended_action = "الدليل غير كافٍ. ارفع ملفًا فعليًا يتضمن البيانات المطلوبة قبل إعادة التحقق."
-        decision = "مرفوض"
+        direct_proof = bool(direct_proof_raw)
 
-    return {
-        "verification_status": "ACCEPTED" if score >= 75 else "REJECTED",
-        "task_status": "CLOSED" if score >= 75 else "WAITING_REVIEW",
-        "verification_score": score,
-        "verification_reason": ("تم قبول الدليل وإغلاق الفجوة. " if score >= 75 else "تم رفض الدليل لعدم اكتماله. ") + " ".join(reasons),
-        "decision": decision,
-        "matched_indicators": matched_terms[:6],
-        "missing_items": missing_items,
-        "reasoning": reasons,
-        "recommended_action": recommended_action,
-        "manager_approval_required": False,
-    }
+    decision, score = apply_guardrails(
+        decision,
+        score,
+        direct_proof,
+        evidence_type_fit,
+        semantic_fit,
+        expected_type,
+        uploaded_type,
+        evidence_pkg,
+    )
+
+    print(f"[EvidenceAgent] mode={mode} decision={decision} score={score}")
+
+    return normalize_final_decision(decision, score, llm_result)
+
 
 class ManagerRejectRequest(BaseModel):
     rejection_note: str
