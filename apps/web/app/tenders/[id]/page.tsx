@@ -764,13 +764,13 @@ function AgentWorkflowStepper({
                                 background: step.done
                                     ? "rgba(89,186,71,0.10)"
                                     : step.active
-                                    ? "rgba(37,99,235,0.09)"
-                                    : "transparent",
+                                        ? "rgba(37,99,235,0.09)"
+                                        : "transparent",
                                 border: step.done
                                     ? "1px solid rgba(89,186,71,0.30)"
                                     : step.active
-                                    ? "1px solid rgba(37,99,235,0.22)"
-                                    : "1px solid transparent",
+                                        ? "1px solid rgba(37,99,235,0.22)"
+                                        : "1px solid transparent",
                                 whiteSpace: "nowrap",
                             }}
                         >
@@ -787,8 +787,8 @@ function AgentWorkflowStepper({
                                     background: step.done
                                         ? "#59BA47"
                                         : step.active
-                                        ? "#2563eb"
-                                        : "#e5e7eb",
+                                            ? "#2563eb"
+                                            : "#e5e7eb",
                                     color: step.done || step.active ? "white" : "#94a3b8",
                                     flexShrink: 0,
                                 }}
@@ -802,8 +802,8 @@ function AgentWorkflowStepper({
                                     color: step.done
                                         ? "#2d7a1e"
                                         : step.active
-                                        ? "#1d4ed8"
-                                        : "#94a3b8",
+                                            ? "#1d4ed8"
+                                            : "#94a3b8",
                                 }}
                             >
                                 {step.label}
@@ -1566,12 +1566,12 @@ export default function TenderDetailsPage() {
                             style={{
                                 background: translateStatus(tender.status) === "قيد المراجعة" ? "#f8fafc" :
                                     translateStatus(tender.status) === "التجهيز للتقديم" ? "#eff6ff" :
-                                    translateStatus(tender.status) === "جاهز للتقديم" ? "#ecfdf5" :
-                                    "#fff7ed",
+                                        translateStatus(tender.status) === "جاهز للتقديم" ? "#ecfdf5" :
+                                            "#fff7ed",
                                 color: translateStatus(tender.status) === "قيد المراجعة" ? "#475569" :
                                     translateStatus(tender.status) === "التجهيز للتقديم" ? "#1d4ed8" :
-                                    translateStatus(tender.status) === "جاهز للتقديم" ? "#065f46" :
-                                    "#9a3412",
+                                        translateStatus(tender.status) === "جاهز للتقديم" ? "#065f46" :
+                                            "#9a3412",
                                 border: "1px solid #e2e8f0",
                             }}
                         >
@@ -1643,12 +1643,12 @@ export default function TenderDetailsPage() {
                 }}
             >
                 {([
-                    { id: "overview",   label: "نظرة عامة",    icon: "◎" },
-                    { id: "gate",       label: "بوابة التقديم", icon: "⊛" },
-                    { id: "documents",  label: "المستندات",     icon: "◈" },
-                    { id: "evidence",   label: "مصفوفة الأدلة", icon: "◇" },
-                    { id: "tasks",      label: "مهام الفجوات",  icon: "◉" },
-                    { id: "resources",  label: "موارد الشركة",  icon: "◆" },
+                    { id: "overview", label: "نظرة عامة", icon: "◎" },
+                    { id: "gate", label: "بوابة التقديم", icon: "⊛" },
+                    { id: "documents", label: "المستندات", icon: "◈" },
+                    { id: "evidence", label: "مصفوفة الأدلة", icon: "◇" },
+                    { id: "tasks", label: "مهام الفجوات", icon: "◉" },
+                    { id: "resources", label: "موارد الشركة", icon: "◆" },
                 ] as { id: WorkspaceTab; label: string; icon: string }[]).map((tab) => {
                     const isActive = activeTab === tab.id;
                     return (
@@ -2399,174 +2399,750 @@ export default function TenderDetailsPage() {
 
             {/* ══ TAB: نظرة عامة — internal readiness (shown below docs matrix) ══ */}
             {/* ══ TAB: مصفوفة الأدلة ════════════════════════════════════ */}
-            {activeTab === "evidence" && documentsCoverageSummary && (
-                <SectionCard>
-                    <SectionHeader
-                        title="مصفوفة التحكم في الأدلة"
-                        subtitle="مقارنة مباشرة بين حالة المتطلب داخليًا وبين قوة الأدلة الموجودة في المستندات."
-                    />
+            {activeTab === "evidence" && (
+                <div style={{ display: "grid", gap: "16px" }}>
+                    {documentsCoverageSummary ? (
+                        (() => {
+                            const evidenceItems = documentsCoverageSummary.requirements_document_coverage || [];
 
-                    <div
-                        style={{
-                            background: "#eef6ff",
-                            border: "1px solid #bfdbfe",
-                            borderRadius: "16px",
-                            padding: "15px",
-                            marginBottom: "12px",
-                        }}
-                    >
-                        <p style={{ margin: 0, lineHeight: 1.9 }}>
-                            <strong>تفسير الوكيل:</strong>{" "}
-                            {documentsCoverageSummary.decision_note}
-                        </p>
-                    </div>
+                            const confidenceToScore = (confidence: string) => {
+                                const value = String(confidence || "").trim().toLowerCase();
 
-                    <div
-                        style={{
-                            background: "#fff7ed",
-                            border: "1px solid #fed7aa",
-                            borderRadius: "16px",
-                            padding: "15px",
-                            marginBottom: "18px",
-                        }}
-                    >
-                        <p style={{ margin: 0, lineHeight: 1.9 }}>
-                            <strong>توصية الوكيل:</strong>{" "}
-                            {documentsCoverageSummary.recommendation}
-                        </p>
-                    </div>
+                                if (
+                                    value.includes("مرتفعة") ||
+                                    value.includes("عالية") ||
+                                    value.includes("high")
+                                ) {
+                                    return 90;
+                                }
 
-                    <div style={{ display: "grid", gap: "12px" }}>
-                        {documentsCoverageSummary.requirements_document_coverage.map((item) => (
+                                if (value.includes("متوسطة") || value.includes("medium")) {
+                                    return 65;
+                                }
+
+                                if (value.includes("منخفضة") || value.includes("low")) {
+                                    return 35;
+                                }
+
+                                return 0;
+                            };
+
+                            const averageConfidence = evidenceItems.length
+                                ? Math.round(
+                                    evidenceItems.reduce(
+                                        (total, item) => total + confidenceToScore(item.confidence),
+                                        0
+                                    ) / evidenceItems.length
+                                )
+                                : 0;
+
+                            const getStatusTone = (status: string) => {
+                                const normalized = String(status || "").trim();
+
+                                if (normalized === "مغطى") {
+                                    return {
+                                        label: "مغطى",
+                                        accent: COLORS.green,
+                                        softBackground: "#ecfdf5",
+                                        border: "#a7f3d0",
+                                        text: "#065f46",
+                                        action: "لا يوجد إجراء عاجل. الدليل الحالي قابل للاستخدام ضمن ملف التقديم.",
+                                    };
+                                }
+
+                                if (normalized === "مغطى جزئيًا" || normalized === "مغطى جزئياً") {
+                                    return {
+                                        label: "مغطى جزئيًا",
+                                        accent: COLORS.amber,
+                                        softBackground: "#fffbeb",
+                                        border: "#fde68a",
+                                        text: "#92400e",
+                                        action: "استكمال الدليل الداعم أو رفع مستند أكثر تحديدًا قبل اعتماد التقديم.",
+                                    };
+                                }
+
+                                return {
+                                    label: normalized || "غير مغطى",
+                                    accent: COLORS.red,
+                                    softBackground: "#fef2f2",
+                                    border: "#fecaca",
+                                    text: "#991b1b",
+                                    action: "رفع دليل مباشر يثبت المتطلب أو إنشاء مهمة فجوة لمعالجته.",
+                                };
+                            };
+
+                            const getConfidenceTone = (confidence: string): CSSProperties => {
+                                const score = confidenceToScore(confidence);
+
+                                if (score >= 80) {
+                                    return {
+                                        background: "#ecfdf5",
+                                        color: "#065f46",
+                                        border: "1px solid #a7f3d0",
+                                    };
+                                }
+
+                                if (score >= 50) {
+                                    return {
+                                        background: "#fffbeb",
+                                        color: "#92400e",
+                                        border: "1px solid #fde68a",
+                                    };
+                                }
+
+                                return {
+                                    background: "#fef2f2",
+                                    color: "#991b1b",
+                                    border: "1px solid #fecaca",
+                                };
+                            };
+
+                            return (
+                                <>
+                                    <SectionCard
+                                        style={{
+                                            border: "1px solid #DFE7E4",
+                                            background: "linear-gradient(135deg, #ffffff 0%, #F4F6F6 100%)",
+                                        }}
+                                    >
+                                        <SectionHeader
+                                            title="مصفوفة تتبع الأدلة"
+                                            subtitle="ربط كل متطلب بالمستند الداعم وسبب حكم الوكيل ونقاط الفجوة، بحيث يمكن تتبع قرار التقديم من المتطلب إلى الدليل إلى الإجراء التالي."
+                                            action={
+                                                <Badge
+                                                    style={{
+                                                        background: "rgba(89,186,71,0.10)",
+                                                        color: "#2d7a1e",
+                                                        border: "1px solid rgba(89,186,71,0.30)",
+                                                    }}
+                                                >
+                                                    Evidence Traceability
+                                                </Badge>
+                                            }
+                                        />
+
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+                                                gap: "12px",
+                                                marginBottom: "18px",
+                                            }}
+                                        >
+                                            <KpiCard
+                                                label="إجمالي المتطلبات"
+                                                value={documentsCoverageSummary.total_requirements}
+                                                helper="كل المتطلبات المرتبطة بالمنافسة"
+                                                accent={COLORS.navy}
+                                            />
+                                            <KpiCard
+                                                label="متطلبات مغطاة"
+                                                value={documentsCoverageSummary.covered_count}
+                                                helper="مدعومة بدليل مقبول"
+                                                accent={COLORS.green}
+                                            />
+                                            <KpiCard
+                                                label="مغطاة جزئيًا"
+                                                value={documentsCoverageSummary.partial_count}
+                                                helper="تحتاج تدعيم قبل القرار"
+                                                accent={COLORS.amber}
+                                            />
+                                            <KpiCard
+                                                label="غير مغطاة"
+                                                value={documentsCoverageSummary.uncovered_count}
+                                                helper="تمثل فجوات يجب إغلاقها"
+                                                accent={COLORS.red}
+                                            />
+                                            <KpiCard
+                                                label="متوسط ثقة الوكيل"
+                                                value={`${averageConfidence}%`}
+                                                helper="تقدير مبني على ثقة كل متطلب"
+                                                accent={COLORS.purple}
+                                            />
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                                                gap: "14px",
+                                                marginBottom: "18px",
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    background: "#ffffff",
+                                                    border: "1px solid #dbeafe",
+                                                    borderRadius: "18px",
+                                                    padding: "16px",
+                                                    boxShadow: "0 10px 24px rgba(15,23,42,0.035)",
+                                                }}
+                                            >
+                                                <p
+                                                    style={{
+                                                        margin: "0 0 8px",
+                                                        color: COLORS.blue,
+                                                        fontSize: "12px",
+                                                        fontWeight: 900,
+                                                    }}
+                                                >
+                                                    تفسير الوكيل
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        margin: 0,
+                                                        color: COLORS.navy,
+                                                        lineHeight: 1.9,
+                                                        fontWeight: 700,
+                                                    }}
+                                                >
+                                                    {documentsCoverageSummary.decision_note ||
+                                                        "لم يتم تسجيل تفسير تفصيلي من الوكيل حتى الآن."}
+                                                </p>
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    background: "#fff7ed",
+                                                    border: "1px solid #fed7aa",
+                                                    borderRadius: "18px",
+                                                    padding: "16px",
+                                                    boxShadow: "0 10px 24px rgba(15,23,42,0.035)",
+                                                }}
+                                            >
+                                                <p
+                                                    style={{
+                                                        margin: "0 0 8px",
+                                                        color: "#9a3412",
+                                                        fontSize: "12px",
+                                                        fontWeight: 900,
+                                                    }}
+                                                >
+                                                    توصية الوكيل
+                                                </p>
+                                                <p
+                                                    style={{
+                                                        margin: 0,
+                                                        color: "#7c2d12",
+                                                        lineHeight: 1.9,
+                                                        fontWeight: 800,
+                                                    }}
+                                                >
+                                                    {documentsCoverageSummary.recommendation ||
+                                                        "يوصى باستكمال الأدلة الناقصة ثم إعادة تشغيل تحليل التغطية."}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {evidenceItems.length === 0 ? (
+                                            <div
+                                                style={{
+                                                    background: "#f8fafc",
+                                                    border: "1px dashed #cbd5e1",
+                                                    borderRadius: "18px",
+                                                    padding: "22px",
+                                                    textAlign: "center",
+                                                    color: COLORS.muted,
+                                                    fontWeight: 800,
+                                                    lineHeight: 1.9,
+                                                }}
+                                            >
+                                                لا توجد عناصر تغطية أدلة حتى الآن. شغّل تحليل التغطية من تبويب المستندات.
+                                            </div>
+                                        ) : (
+                                            <div
+                                                style={{
+                                                    background: "#ffffff",
+                                                    border: "1px solid #e5e7eb",
+                                                    borderRadius: "18px",
+                                                    overflowX: "auto",
+                                                    overflowY: "hidden",
+                                                }}
+                                            >
+                                                <div style={{ minWidth: "1120px" }}>
+                                                    <div
+                                                        style={{
+                                                            display: "grid",
+                                                            gridTemplateColumns: "1.25fr 0.9fr 0.9fr 1.15fr 0.9fr",
+                                                            gap: 0,
+                                                            background: "#232122",
+                                                            color: "white",
+                                                            fontSize: "12px",
+                                                            fontWeight: 900,
+                                                            position: "sticky",
+                                                            top: 0,
+                                                            zIndex: 1,
+                                                        }}
+                                                    >
+                                                        {[
+                                                            "المتطلب",
+                                                            "حالة التغطية",
+                                                            "أفضل دليل",
+                                                            "سبب حكم الوكيل",
+                                                            "الإجراء التالي",
+                                                        ].map((header) => (
+                                                            <div
+                                                                key={header}
+                                                                style={{
+                                                                    padding: "12px",
+                                                                    borderInlineStart: "1px solid rgba(255,255,255,0.10)",
+                                                                }}
+                                                            >
+                                                                {header}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div style={{ display: "grid" }}>
+                                                        {evidenceItems.map((item, index) => {
+                                                            const statusTone = getStatusTone(item.best_document_coverage_status);
+                                                            const matchedKeywords = Array.isArray(item.matched_keywords)
+                                                                ? item.matched_keywords
+                                                                : [];
+                                                            const evidenceName =
+                                                                item.best_evidence_document?.document_name ||
+                                                                "لا يوجد مستند داعم محدد";
+
+                                                            return (
+                                                                <div
+                                                                    key={item.requirement_id}
+                                                                    style={{
+                                                                        display: "grid",
+                                                                        gridTemplateColumns: "1.25fr 0.9fr 0.9fr 1.15fr 0.9fr",
+                                                                        gap: 0,
+                                                                        background: index % 2 === 0 ? "#ffffff" : "#fbfdff",
+                                                                        borderTop: index === 0 ? "none" : "1px solid #e5e7eb",
+                                                                    }}
+                                                                >
+                                                                    <div
+                                                                        style={{
+                                                                            padding: "14px",
+                                                                            borderInlineEnd: `5px solid ${statusTone.accent}`,
+                                                                        }}
+                                                                    >
+                                                                        <div
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                gap: "8px",
+                                                                                flexWrap: "wrap",
+                                                                                marginBottom: "8px",
+                                                                            }}
+                                                                        >
+                                                                            <Badge style={getPriorityStyle(item.priority)}>
+                                                                                أولوية: {item.priority || "غير محددة"}
+                                                                            </Badge>
+                                                                            <Badge
+                                                                                style={{
+                                                                                    background: "#f8fafc",
+                                                                                    color: "#475569",
+                                                                                    border: "1px solid #cbd5e1",
+                                                                                }}
+                                                                            >
+                                                                                متطلب {item.requirement_id}
+                                                                            </Badge>
+                                                                        </div>
+
+                                                                        <h3
+                                                                            style={{
+                                                                                margin: 0,
+                                                                                color: COLORS.navy,
+                                                                                fontSize: "15px",
+                                                                                lineHeight: 1.8,
+                                                                            }}
+                                                                        >
+                                                                            {item.requirement_title || "متطلب غير مسمى"}
+                                                                        </h3>
+
+                                                                        <p
+                                                                            style={{
+                                                                                margin: "8px 0 0",
+                                                                                color: COLORS.muted,
+                                                                                fontSize: "12px",
+                                                                                lineHeight: 1.7,
+                                                                            }}
+                                                                        >
+                                                                            {item.category || "تصنيف غير محدد"} · حالة المتطلب داخليًا:{" "}
+                                                                            <strong style={{ color: COLORS.navy }}>
+                                                                                {item.current_system_status || "غير محددة"}
+                                                                            </strong>
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div
+                                                                        style={{
+                                                                            padding: "14px",
+                                                                            borderInlineStart: "1px solid #eef2f7",
+                                                                        }}
+                                                                    >
+                                                                        <Badge
+                                                                            style={{
+                                                                                background: statusTone.softBackground,
+                                                                                color: statusTone.text,
+                                                                                border: `1px solid ${statusTone.border}`,
+                                                                            }}
+                                                                        >
+                                                                            {statusTone.label}
+                                                                        </Badge>
+
+                                                                        <div style={{ marginTop: "12px" }}>
+                                                                            <p
+                                                                                style={{
+                                                                                    margin: "0 0 6px",
+                                                                                    color: COLORS.lightMuted,
+                                                                                    fontSize: "12px",
+                                                                                    fontWeight: 800,
+                                                                                }}
+                                                                            >
+                                                                                ثقة الوكيل
+                                                                            </p>
+                                                                            <Badge style={getConfidenceTone(item.confidence)}>
+                                                                                {item.confidence || "غير محددة"}
+                                                                            </Badge>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div
+                                                                        style={{
+                                                                            padding: "14px",
+                                                                            borderInlineStart: "1px solid #eef2f7",
+                                                                        }}
+                                                                    >
+                                                                        <p
+                                                                            style={{
+                                                                                margin: "0 0 8px",
+                                                                                color: COLORS.lightMuted,
+                                                                                fontSize: "12px",
+                                                                                fontWeight: 800,
+                                                                            }}
+                                                                        >
+                                                                            المستند الداعم
+                                                                        </p>
+                                                                        <strong
+                                                                            style={{
+                                                                                display: "block",
+                                                                                color: item.best_evidence_document
+                                                                                    ? COLORS.navy
+                                                                                    : COLORS.lightMuted,
+                                                                                lineHeight: 1.7,
+                                                                                fontSize: "13px",
+                                                                                wordBreak: "break-word",
+                                                                            }}
+                                                                        >
+                                                                            {evidenceName}
+                                                                        </strong>
+
+                                                                        {item.best_evidence_document && (
+                                                                            <p
+                                                                                style={{
+                                                                                    margin: "8px 0 0",
+                                                                                    color: COLORS.lightMuted,
+                                                                                    fontSize: "11px",
+                                                                                }}
+                                                                            >
+                                                                                رقم المستند: {item.best_evidence_document.document_id}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div
+                                                                        style={{
+                                                                            padding: "14px",
+                                                                            borderInlineStart: "1px solid #eef2f7",
+                                                                        }}
+                                                                    >
+                                                                        <p
+                                                                            style={{
+                                                                                margin: 0,
+                                                                                color: COLORS.muted,
+                                                                                lineHeight: 1.9,
+                                                                                fontSize: "13px",
+                                                                            }}
+                                                                        >
+                                                                            {item.reason || "لم يسجل الوكيل سببًا تفصيليًا لهذا الحكم."}
+                                                                        </p>
+
+                                                                        <div
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                gap: "6px",
+                                                                                flexWrap: "wrap",
+                                                                                marginTop: "10px",
+                                                                            }}
+                                                                        >
+                                                                            {matchedKeywords.length > 0 ? (
+                                                                                matchedKeywords.slice(0, 6).map((keyword) => (
+                                                                                    <span
+                                                                                        key={`${item.requirement_id}-${keyword}`}
+                                                                                        style={{
+                                                                                            display: "inline-flex",
+                                                                                            padding: "5px 8px",
+                                                                                            borderRadius: "999px",
+                                                                                            background: "#F4F6F6",
+                                                                                            color: "#475569",
+                                                                                            border: "1px solid #DFE7E4",
+                                                                                            fontSize: "11px",
+                                                                                            fontWeight: 800,
+                                                                                        }}
+                                                                                    >
+                                                                                        {keyword}
+                                                                                    </span>
+                                                                                ))
+                                                                            ) : (
+                                                                                <span
+                                                                                    style={{
+                                                                                        color: COLORS.lightMuted,
+                                                                                        fontSize: "12px",
+                                                                                        fontWeight: 800,
+                                                                                    }}
+                                                                                >
+                                                                                    لا توجد كلمات مطابقة كافية
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div
+                                                                        style={{
+                                                                            padding: "14px",
+                                                                            borderInlineStart: "1px solid #eef2f7",
+                                                                        }}
+                                                                    >
+                                                                        <div
+                                                                            style={{
+                                                                                background: statusTone.softBackground,
+                                                                                color: statusTone.text,
+                                                                                border: `1px solid ${statusTone.border}`,
+                                                                                borderRadius: "14px",
+                                                                                padding: "12px",
+                                                                                lineHeight: 1.8,
+                                                                                fontSize: "13px",
+                                                                                fontWeight: 800,
+                                                                            }}
+                                                                        >
+                                                                            {statusTone.action}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </SectionCard>
+
+                                    <SectionCard>
+                                        <SectionHeader
+                                            title="سجل المتطلبات المختصر"
+                                            subtitle="عرض سريع للمتطلبات الأساسية وحالتها الداخلية للمراجعة التشغيلية."
+                                            action={
+                                                <Badge
+                                                    style={{
+                                                        background: "#F4F6F6",
+                                                        color: "#232122",
+                                                        border: "1px solid #DFE7E4",
+                                                    }}
+                                                >
+                                                    {requirements.length} متطلبات
+                                                </Badge>
+                                            }
+                                        />
+
+                                        {requirements.length === 0 ? (
+                                            <div
+                                                style={{
+                                                    background: "#f8fafc",
+                                                    border: "1px dashed #cbd5e1",
+                                                    borderRadius: "16px",
+                                                    padding: "18px",
+                                                    color: COLORS.muted,
+                                                    fontWeight: 800,
+                                                    textAlign: "center",
+                                                }}
+                                            >
+                                                لا توجد متطلبات مسجلة حتى الآن.
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: "grid", gap: "9px" }}>
+                                                {requirements.map((requirement) => {
+                                                    const coverageItem = evidenceItems.find(
+                                                        (item) => item.requirement_id === requirement.id
+                                                    );
+                                                    const statusTone = getStatusTone(
+                                                        coverageItem?.best_document_coverage_status || requirement.status
+                                                    );
+
+                                                    return (
+                                                        <div
+                                                            key={requirement.id}
+                                                            style={{
+                                                                display: "grid",
+                                                                gridTemplateColumns: "minmax(240px, 1fr) auto auto",
+                                                                gap: "12px",
+                                                                alignItems: "center",
+                                                                background: "#f8fafc",
+                                                                border: "1px solid #e5e7eb",
+                                                                borderRadius: "16px",
+                                                                padding: "12px 14px",
+                                                            }}
+                                                        >
+                                                            <div>
+                                                                <strong
+                                                                    style={{
+                                                                        color: COLORS.navy,
+                                                                        lineHeight: 1.8,
+                                                                    }}
+                                                                >
+                                                                    {requirement.title}
+                                                                </strong>
+                                                                <p
+                                                                    style={{
+                                                                        margin: "4px 0 0",
+                                                                        color: COLORS.lightMuted,
+                                                                        fontSize: "12px",
+                                                                    }}
+                                                                >
+                                                                    {requirement.category} · متطلب رقم {requirement.id}
+                                                                </p>
+                                                            </div>
+
+                                                            <Badge style={getPriorityStyle(requirement.priority)}>
+                                                                {requirement.priority}
+                                                            </Badge>
+
+                                                            <Badge
+                                                                style={{
+                                                                    background: statusTone.softBackground,
+                                                                    color: statusTone.text,
+                                                                    border: `1px solid ${statusTone.border}`,
+                                                                }}
+                                                            >
+                                                                {statusTone.label}
+                                                            </Badge>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </SectionCard>
+                                </>
+                            );
+                        })()
+                    ) : (
+                        <SectionCard>
+                            <SectionHeader
+                                title="مصفوفة تتبع الأدلة"
+                                subtitle="لم يتم تشغيل تحليل تغطية الأدلة بعد. ارفع مستندات المنافسة وشغّل استخراج النص ثم تحليل التغطية."
+                                action={
+                                    <Badge
+                                        style={{
+                                            background: "#fff7ed",
+                                            color: "#9a3412",
+                                            border: "1px solid #fed7aa",
+                                        }}
+                                    >
+                                        بانتظار التحليل
+                                    </Badge>
+                                }
+                            />
+
                             <div
-                                key={item.requirement_id}
                                 style={{
                                     background: "#f8fafc",
-                                    border: `1px solid ${COLORS.border}`,
+                                    border: "1px dashed #cbd5e1",
                                     borderRadius: "18px",
-                                    padding: "16px",
+                                    padding: "22px",
+                                    textAlign: "center",
+                                    color: COLORS.muted,
+                                    fontWeight: 800,
+                                    lineHeight: 1.9,
+                                    marginBottom: "16px",
                                 }}
                             >
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "flex-start",
-                                        gap: "14px",
-                                        flexWrap: "wrap",
-                                        marginBottom: "12px",
-                                    }}
-                                >
-                                    <div>
-                                        <h3 style={{ margin: 0, fontSize: "17px", lineHeight: 1.7 }}>
-                                            {item.requirement_title}
-                                        </h3>
-                                        <p style={{ margin: "4px 0 0", color: COLORS.muted }}>
-                                            متطلب رقم {item.requirement_id} · {item.category}
-                                        </p>
-                                    </div>
-
-                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                        <Badge
-                                            style={getCoverageBadgeStyle(
-                                                item.best_document_coverage_status
-                                            )}
-                                        >
-                                            {item.best_document_coverage_status}
-                                        </Badge>
-                                        <Badge style={getPriorityStyle(item.priority)}>
-                                            أولوية: {item.priority}
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <div
-                                    style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-                                        gap: "10px",
-                                        marginBottom: "12px",
-                                    }}
-                                >
-                                    <div
-                                        style={{
-                                            background: "white",
-                                            border: `1px solid ${COLORS.softBorder}`,
-                                            borderRadius: "14px",
-                                            padding: "12px",
-                                        }}
-                                    >
-                                        <p style={{ margin: "0 0 6px", color: COLORS.lightMuted }}>
-                                            حالة المتطلب داخليًا
-                                        </p>
-                                        <strong>{item.current_system_status}</strong>
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            background: "white",
-                                            border: `1px solid ${COLORS.softBorder}`,
-                                            borderRadius: "14px",
-                                            padding: "12px",
-                                        }}
-                                    >
-                                        <p style={{ margin: "0 0 6px", color: COLORS.lightMuted }}>
-                                            أفضل مستند داعم
-                                        </p>
-                                        <strong>
-                                            {item.best_evidence_document
-                                                ? item.best_evidence_document.document_name
-                                                : "لا يوجد دليل كافٍ"}
-                                        </strong>
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            background: "white",
-                                            border: `1px solid ${COLORS.softBorder}`,
-                                            borderRadius: "14px",
-                                            padding: "12px",
-                                        }}
-                                    >
-                                        <p style={{ margin: "0 0 6px", color: COLORS.lightMuted }}>
-                                            ثقة الوكيل
-                                        </p>
-                                        <strong>{item.confidence}</strong>
-                                    </div>
-                                </div>
-
-                                <div
-                                    style={{
-                                        background: "white",
-                                        border: `1px solid ${COLORS.softBorder}`,
-                                        borderRadius: "14px",
-                                        padding: "12px",
-                                    }}
-                                >
-                                    <p style={{ margin: "0 0 7px", fontWeight: 900 }}>
-                                        سبب الحكم
-                                    </p>
-                                    <p style={{ margin: 0, color: COLORS.muted, lineHeight: 1.9 }}>
-                                        {item.reason}
-                                    </p>
-                                    <p
-                                        style={{
-                                            margin: "8px 0 0",
-                                            color: COLORS.lightMuted,
-                                            fontSize: "12px",
-                                            lineHeight: 1.8,
-                                        }}
-                                    >
-                                        <strong>الكلمات المطابقة:</strong>{" "}
-                                        {item.matched_keywords.length > 0
-                                            ? item.matched_keywords.join("، ")
-                                            : "لا توجد كلمات مطابقة كافية"}
-                                    </p>
-                                </div>
+                                لا توجد مصفوفة أدلة حتى الآن. انتقل إلى تبويب المستندات، ثم شغّل:
+                                <br />
+                                استخراج النص ← تحليل التغطية ← إنشاء مهام الفجوات.
                             </div>
-                        ))}
-                    </div>
-                </SectionCard>
+
+                            <SectionHeader
+                                title="المتطلبات المسجلة"
+                                subtitle="هذه القائمة تظهر المتطلبات الموجودة حتى قبل تشغيل تحليل الأدلة."
+                                action={
+                                    <Badge
+                                        style={{
+                                            background: "#F4F6F6",
+                                            color: "#232122",
+                                            border: "1px solid #DFE7E4",
+                                        }}
+                                    >
+                                        {requirements.length} متطلبات
+                                    </Badge>
+                                }
+                            />
+
+                            {requirements.length === 0 ? (
+                                <div
+                                    style={{
+                                        background: "#ffffff",
+                                        border: "1px dashed #cbd5e1",
+                                        borderRadius: "16px",
+                                        padding: "18px",
+                                        color: COLORS.muted,
+                                        fontWeight: 800,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    لا توجد متطلبات مسجلة حتى الآن.
+                                </div>
+                            ) : (
+                                <div style={{ display: "grid", gap: "9px" }}>
+                                    {requirements.map((requirement) => (
+                                        <div
+                                            key={requirement.id}
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "minmax(240px, 1fr) auto auto",
+                                                gap: "12px",
+                                                alignItems: "center",
+                                                background: "#ffffff",
+                                                border: "1px solid #e5e7eb",
+                                                borderRadius: "16px",
+                                                padding: "12px 14px",
+                                            }}
+                                        >
+                                            <div>
+                                                <strong
+                                                    style={{
+                                                        color: COLORS.navy,
+                                                        lineHeight: 1.8,
+                                                    }}
+                                                >
+                                                    {requirement.title}
+                                                </strong>
+                                                <p
+                                                    style={{
+                                                        margin: "4px 0 0",
+                                                        color: COLORS.lightMuted,
+                                                        fontSize: "12px",
+                                                    }}
+                                                >
+                                                    {requirement.category} · متطلب رقم {requirement.id}
+                                                </p>
+                                            </div>
+
+                                            <Badge style={getPriorityStyle(requirement.priority)}>
+                                                {requirement.priority}
+                                            </Badge>
+                                            <Badge style={getCoverageBadgeStyle(requirement.status)}>
+                                                {requirement.status}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </SectionCard>
+                    )}
+                </div>
             )}
 
             {/* ══ TAB: المستندات ═══════════════════════════════════════ */}
@@ -2990,55 +3566,6 @@ export default function TenderDetailsPage() {
                 )}
             </SectionCard>}
 
-            {/* ══ TAB: مصفوفة الأدلة — requirements list ════════════════ */}
-            {activeTab === "evidence" && <SectionCard>
-                <SectionHeader
-                    title="المتطلبات"
-                    subtitle="قائمة المتطلبات الأساسية المرتبطة بهذه المنافسة."
-                />
-
-                <div style={{ display: "grid", gap: "10px" }}>
-                    {requirements.map((requirement) => (
-                        <div
-                            key={requirement.id}
-                            style={{
-                                background: "#f8fafc",
-                                border: `1px solid ${COLORS.border}`,
-                                borderRadius: "16px",
-                                padding: "14px",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "flex-start",
-                                    gap: "12px",
-                                    flexWrap: "wrap",
-                                }}
-                            >
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: "16px", lineHeight: 1.7 }}>
-                                        {requirement.title}
-                                    </h3>
-                                    <p style={{ margin: "6px 0 0", color: COLORS.muted }}>
-                                        {requirement.category} · متطلب رقم {requirement.id}
-                                    </p>
-                                </div>
-
-                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                    <Badge style={getPriorityStyle(requirement.priority)}>
-                                        {requirement.priority}
-                                    </Badge>
-                                    <Badge style={getCoverageBadgeStyle(requirement.status)}>
-                                        {requirement.status}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </SectionCard>}
         </main>
     );
 }   
