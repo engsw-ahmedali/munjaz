@@ -30,3 +30,11 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/
+# Local runtime data
+apps/api/munjiz.db
+apps/api/storage/
+apps/api/uploads/
+apps/web/.next/
+apps/web/node_modules/
+.env
+.env.local

@@ -113,6 +113,96 @@ function decisionLabel(score: number) {
     return "غير جاهز";
 }
 
+function getAgentRecommendation(tender: Tender) {
+    const score = Number(tender.readiness_score || 0);
+    const status = String(tender.status || "").toUpperCase();
+
+    if (status === "BLOCKED" || score < 45) {
+        return {
+            label: "لا يعتمد الآن",
+            tone: "red",
+            color: "#b91c1c",
+            background: "#fff1f2",
+            border: "#fecdd3",
+            summary: "توصية الوكيل: أوقف التقديم مؤقتًا حتى إغلاق الفجوات الحرجة وتثبيت الأدلة المطلوبة.",
+            nextAction: "راجع بوابة التقديم ومصفوفة الأدلة",
+        };
+    }
+
+    if (status === "CONDITIONAL_BID" || (score >= 45 && score < 65)) {
+        return {
+            label: "دخول مشروط",
+            tone: "amber",
+            color: "#b45309",
+            background: "#fffbeb",
+            border: "#fde68a",
+            summary: "توصية الوكيل: يمكن دراسة الدخول بشرط تدعيم الأدلة وإغلاق البنود عالية الحساسية قبل الاعتماد.",
+            nextAction: "أغلق مهام الفجوات أولًا",
+        };
+    }
+
+    if (status === "BID_IN_PROGRESS" || (score >= 65 && score < 80)) {
+        return {
+            label: "قابل للتجهيز",
+            tone: "teal",
+            color: "#0f766e",
+            background: "#ecfdf5",
+            border: "#a7f3d0",
+            summary: "توصية الوكيل: الفرصة واعدة، لكنها تحتاج متابعة تشغيلية وتوثيق أقوى قبل قرار التقديم النهائي.",
+            nextAction: "استكمل المستندات والموارد",
+        };
+    }
+
+    if (score >= 80 && score < 90) {
+        return {
+            label: "مناسب مبدئيًا",
+            tone: "green",
+            color: brand.greenDark,
+            background: "#f0fdf4",
+            border: "#bbf7d0",
+            summary: "توصية الوكيل: مناسب مبدئيًا للتقديم مع مراجعة الأدلة النهائية قبل الاعتماد.",
+            nextAction: "راجع مذكرة القرار",
+        };
+    }
+
+    return {
+        label: "جاهز للتقديم",
+        tone: "green",
+        color: "#15803d",
+        background: "#f0fdf4",
+        border: "#bbf7d0",
+        summary: "توصية الوكيل: الجاهزية مرتفعة، ويمكن الانتقال لمراجعة الاعتماد النهائي ومذكرة القرار.",
+        nextAction: "افتح التفاصيل للاعتماد",
+    };
+}
+
+function getDeadlineMeta(value: string) {
+    if (!value) {
+        return { label: "موعد غير محدد", color: "#64748b", background: "#f8fafc", border: "#cbd5e1" };
+    }
+
+    const deadline = new Date(value);
+    if (Number.isNaN(deadline.getTime())) {
+        return { label: "موعد يحتاج مراجعة", color: "#64748b", background: "#f8fafc", border: "#cbd5e1" };
+    }
+
+    const today = new Date();
+    const ms = deadline.getTime() - today.getTime();
+    const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+
+    if (days < 0) {
+        return { label: "منتهي", color: "#b91c1c", background: "#fef2f2", border: "#fecaca" };
+    }
+    if (days <= 7) {
+        return { label: `${days} أيام متبقية`, color: "#b45309", background: "#fffbeb", border: "#fde68a" };
+    }
+    if (days <= 21) {
+        return { label: `${days} يوم للتقديم`, color: "#0f766e", background: "#ecfdf5", border: "#a7f3d0" };
+    }
+
+    return { label: "وقت كافٍ للمراجعة", color: "#15803d", background: "#f0fdf4", border: "#bbf7d0" };
+}
+
 function formatDate(value: string) {
     if (!value) return "غير محدد";
 
@@ -235,8 +325,8 @@ export default function TendersPage() {
                     <span style={eyebrowStyle}>مركز قيادة المنافسات</span>
                     <h1 style={titleStyle}>المنافسات</h1>
                     <p style={subtitleStyle}>
-                        مساحة تشغيلية لمتابعة فرص الشركة، تحليل كراسات المنافسات، قياس
-                        الجاهزية، وتوجيه الفريق نحو قرار تقديم واضح ومدعوم بالأدلة.
+                        قائمة فرص تشغيلية يقيّمها الوكيل حسب الجاهزية، قوة الأدلة، المخاطر،
+                        والموعد النهائي حتى ينتقل الفريق من متابعة الفرص إلى قرار Bid / No-Bid واضح.
                     </p>
                 </div>
 
@@ -334,6 +424,12 @@ export default function TendersPage() {
                         >
                             محجوبة
                         </FilterButton>
+                        <FilterButton
+                            active={statusFilter === "REVIEW"}
+                            onClick={() => setStatusFilter("REVIEW")}
+                        >
+                            مراجعة
+                        </FilterButton>
                     </div>
                 </div>
 
@@ -343,13 +439,16 @@ export default function TendersPage() {
             </section>
 
             <section style={sectionHeaderStyle}>
-                <div>
-                    <h2 style={sectionTitleStyle}>قائمة الفرص</h2>
-                    <p style={sectionHintStyle}>
-                        {loading
-                            ? "جاري تحميل بيانات المنافسات..."
-                            : `${filteredTenders.length} فرصة ظاهرة من أصل ${tenders.length}`}
-                    </p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <div style={{ width: "3px", background: brand.green, borderRadius: "999px", alignSelf: "stretch", flexShrink: 0 }} />
+                    <div>
+                        <h2 style={sectionTitleStyle}>قائمة فرص التقديم</h2>
+                        <p style={sectionHintStyle}>
+                            {loading
+                                ? "جاري تحميل بيانات المنافسات..."
+                                : `${filteredTenders.length} فرصة يعرضها الوكيل من أصل ${tenders.length}`}
+                        </p>
+                    </div>
                 </div>
             </section>
 
@@ -381,26 +480,44 @@ function TenderCard({ tender }: { tender: Tender }) {
     const score = Number(tender.readiness_score || 0);
     const status = getStatusMeta(tender.status);
     const scoreAccent = scoreColor(score);
+    const recommendation = getAgentRecommendation(tender);
+    const deadline = getDeadlineMeta(tender.submission_deadline);
 
     return (
         <article style={cardStyle}>
-            <div style={cardAccentStyle} />
+            <div style={{ ...cardAccentStyle, background: scoreAccent }} />
 
             <div style={cardTopStyle}>
-                <div style={idBoxStyle}>
-                    <span>رقم</span>
-                    <strong>{tender.id}</strong>
+                <div style={cardIdentityStyle}>
+                    <div style={idBoxStyle}>
+                        <span>رقم</span>
+                        <strong>{tender.id}</strong>
+                    </div>
+
+                    <div style={cardStatusStackStyle}>
+                        <span
+                            style={{
+                                ...statusPillStyle,
+                                color: status.color,
+                                background: status.background,
+                                borderColor: status.border,
+                            }}
+                        >
+                            {status.label}
+                        </span>
+                        <span style={agentMiniLabelStyle}>وكيل منجز يراقب الفرصة</span>
+                    </div>
                 </div>
 
                 <span
                     style={{
-                        ...statusPillStyle,
-                        color: status.color,
-                        background: status.background,
-                        borderColor: status.border,
+                        ...deadlinePillStyle,
+                        color: deadline.color,
+                        background: deadline.background,
+                        borderColor: deadline.border,
                     }}
                 >
-                    {status.label}
+                    {deadline.label}
                 </span>
             </div>
 
@@ -412,14 +529,34 @@ function TenderCard({ tender }: { tender: Tender }) {
                 </p>
             </div>
 
+            <div
+                style={{
+                    ...agentRecommendationStyle,
+                    background: recommendation.background,
+                    borderColor: recommendation.border,
+                }}
+            >
+                <div style={agentRecommendationHeaderStyle}>
+                    <span style={agentRecommendationTitleStyle}>توصية الوكيل</span>
+                    <strong style={{ color: recommendation.color, fontSize: "12px" }}>{recommendation.label}</strong>
+                </div>
+                <p style={agentRecommendationTextStyle}>{recommendation.summary}</p>
+                <div style={agentChipRowStyle}>
+                    <span style={{ ...agentChipStyle, color: recommendation.color, borderColor: recommendation.border, background: recommendation.background }}>
+                        {recommendation.nextAction}
+                    </span>
+                </div>
+            </div>
+
             <div style={insightRowStyle}>
                 <MiniInfo title="آخر موعد" value={formatDate(tender.submission_deadline)} />
                 <MiniInfo title="قرار مبدئي" value={decisionLabel(score)} />
+                <MiniInfo title="حالة المتابعة" value={status.label} />
             </div>
 
             <div style={readinessBlockStyle}>
                 <div style={readinessHeaderStyle}>
-                    <span>الجاهزية</span>
+                    <span>جاهزية التقديم حسب الوكيل</span>
                     <strong style={{ color: scoreAccent }}>{score}%</strong>
                 </div>
 
@@ -436,7 +573,7 @@ function TenderCard({ tender }: { tender: Tender }) {
 
             <div style={cardActionsStyle}>
                 <Link href={`/tenders/${tender.id}`} style={primarySmallButtonStyle}>
-                    فتح التفاصيل
+                    فتح مركز القرار
                 </Link>
 
                 <Link href={`/tenders/${tender.id}/reasoning`} style={secondarySmallButtonStyle}>
@@ -469,14 +606,17 @@ function MetricCard({
             style={{
                 ...metricCardStyle,
                 ...(emphasis ? metricCardEmphasisStyle : {}),
-                borderTop: `4px solid ${color}`,
             }}
         >
-            <div style={smallLabelStyle}>{title}</div>
-            <strong style={{ color, fontSize: emphasis ? "34px" : "30px" }}>
-                {value}
-            </strong>
-            <p style={metricHintStyle}>{hint}</p>
+            {/* Left accent bar (RTL: insetInlineStart) */}
+            <div style={{ width: "4px", background: color, flexShrink: 0 }} />
+            <div style={{ padding: "14px 14px", flex: 1, display: "flex", flexDirection: "column" }}>
+                <div style={smallLabelStyle}>{title}</div>
+                <strong style={{ color, fontSize: emphasis ? "32px" : "28px", fontWeight: 950, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                    {value}
+                </strong>
+                <p style={metricHintStyle}>{hint}</p>
+            </div>
         </div>
     );
 }
@@ -565,22 +705,20 @@ const heroStyle: CSSProperties = {
     gap: "22px",
     alignItems: "center",
     padding: "26px 28px",
-    borderRadius: "30px",
-    border: "1px solid rgba(89,186,71,0.22)",
-    background:
-        "linear-gradient(135deg, rgba(255,255,255,0.99) 0%, rgba(248,250,249,1) 58%, rgba(236,253,245,0.9) 100%)",
-    boxShadow: "0 18px 45px rgba(35,33,34,0.055)",
+    borderRadius: "26px",
+    background: "linear-gradient(135deg, #1c1b1c 0%, #232122 60%, #1a1819 100%)",
+    boxShadow: "0 24px 56px rgba(35,33,34,0.22)",
 };
 
 const heroPatternStyle: CSSProperties = {
     position: "absolute",
-    insetInlineStart: "-60px",
-    top: "-70px",
-    width: "220px",
-    height: "220px",
+    insetInlineEnd: "-40px",
+    top: "-60px",
+    width: "260px",
+    height: "260px",
     borderRadius: "999px",
-    background: "rgba(89,186,71,0.08)",
-    filter: "blur(2px)",
+    background: "rgba(89,186,71,0.10)",
+    filter: "blur(60px)",
 };
 
 const heroTextStyle: CSSProperties = {
@@ -591,29 +729,32 @@ const heroTextStyle: CSSProperties = {
 
 const eyebrowStyle: CSSProperties = {
     display: "inline-flex",
-    padding: "7px 13px",
+    padding: "4px 12px",
     borderRadius: "999px",
-    background: "rgba(89,186,71,0.1)",
-    color: brand.greenDark,
-    border: "1px solid rgba(89,186,71,0.32)",
+    background: "rgba(89,186,71,0.15)",
+    color: "#7de86a",
+    border: "1px solid rgba(89,186,71,0.25)",
     fontWeight: 900,
-    fontSize: "12px",
+    fontSize: "11px",
     marginBottom: "10px",
+    letterSpacing: "0.04em",
 };
 
 const titleStyle: CSSProperties = {
     margin: 0,
-    fontSize: "34px",
-    color: brand.dark,
+    fontSize: "30px",
+    color: "#ffffff",
     letterSpacing: "-0.04em",
+    fontWeight: 950,
 };
 
 const subtitleStyle: CSSProperties = {
-    margin: "10px 0 0",
-    color: brand.muted,
-    lineHeight: 1.9,
+    margin: "8px 0 0",
+    color: "rgba(255,255,255,0.55)",
+    lineHeight: 1.8,
     maxWidth: "820px",
     fontWeight: 600,
+    fontSize: "13px",
 };
 
 const heroActionClusterStyle: CSSProperties = {
@@ -626,9 +767,9 @@ const heroActionClusterStyle: CSSProperties = {
 
 const primaryButtonStyle: CSSProperties = {
     border: "0",
-    borderRadius: "15px",
-    padding: "12px 17px",
-    background: brand.dark,
+    borderRadius: "14px",
+    padding: "11px 18px",
+    background: brand.green,
     color: "white",
     fontWeight: 900,
     cursor: "pointer",
@@ -636,21 +777,23 @@ const primaryButtonStyle: CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 12px 26px rgba(35,33,34,0.18)",
+    boxShadow: `0 8px 20px ${brand.green}44`,
+    fontSize: "13px",
 };
 
 const secondaryButtonStyle: CSSProperties = {
-    border: `1px solid ${brand.border}`,
-    borderRadius: "15px",
-    padding: "11px 16px",
-    background: "white",
-    color: brand.dark,
+    border: "1px solid rgba(255,255,255,0.15)",
+    borderRadius: "14px",
+    padding: "10px 16px",
+    background: "rgba(255,255,255,0.08)",
+    color: "rgba(255,255,255,0.85)",
     fontWeight: 900,
     cursor: "pointer",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: "13px",
 };
 
 const errorStyle: CSSProperties = {
@@ -664,36 +807,39 @@ const errorStyle: CSSProperties = {
 
 const bentoGridStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: "14px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+    gap: "10px",
 };
 
 const metricCardStyle: CSSProperties = {
     background: brand.card,
     border: `1px solid ${brand.border}`,
-    borderRadius: "22px",
-    padding: "17px",
-    boxShadow: "0 12px 30px rgba(35,33,34,0.04)",
-    minHeight: "124px",
+    borderRadius: "18px",
+    padding: "0",
+    boxShadow: "0 2px 10px rgba(35,33,34,0.04)",
+    minHeight: "108px",
+    display: "flex",
+    overflow: "hidden",
 };
 
 const metricCardEmphasisStyle: CSSProperties = {
-    background:
-        "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(240,253,244,0.92) 100%)",
+    background: "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(240,253,244,0.92) 100%)",
 };
 
 const smallLabelStyle: CSSProperties = {
     color: "#8a9591",
-    fontSize: "12px",
+    fontSize: "10px",
     fontWeight: 900,
-    marginBottom: "7px",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    marginBottom: "6px",
 };
 
 const metricHintStyle: CSSProperties = {
-    margin: "8px 0 0",
+    margin: "6px 0 0",
     color: brand.muted,
-    fontSize: "12px",
-    lineHeight: 1.7,
+    fontSize: "11px",
+    lineHeight: 1.6,
 };
 
 const controlPanelStyle: CSSProperties = {
@@ -752,9 +898,10 @@ const filterButtonStyle: CSSProperties = {
 };
 
 const filterButtonActiveStyle: CSSProperties = {
-    background: brand.dark,
+    background: brand.green,
     color: "white",
-    borderColor: brand.dark,
+    borderColor: brand.green,
+    boxShadow: `0 4px 12px ${brand.green}44`,
 };
 
 const refreshButtonStyle: CSSProperties = {
@@ -767,18 +914,22 @@ const sectionHeaderStyle: CSSProperties = {
     justifyContent: "space-between",
     alignItems: "end",
     marginTop: "2px",
+    paddingBottom: "10px",
+    borderBottom: `1px solid ${brand.border}`,
 };
 
 const sectionTitleStyle: CSSProperties = {
     margin: 0,
-    fontSize: "20px",
+    fontSize: "17px",
     color: brand.dark,
+    fontWeight: 900,
+    letterSpacing: "-0.02em",
 };
 
 const sectionHintStyle: CSSProperties = {
-    margin: "6px 0 0",
+    margin: "4px 0 0",
     color: brand.muted,
-    fontSize: "13px",
+    fontSize: "12px",
     fontWeight: 700,
 };
 
@@ -820,8 +971,8 @@ const emptyTextStyle: CSSProperties = {
 
 const cardsGridStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(390px, 1fr))",
-    gap: "16px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))",
+    gap: "12px",
 };
 
 const cardStyle: CSSProperties = {
@@ -829,11 +980,11 @@ const cardStyle: CSSProperties = {
     overflow: "hidden",
     background: "white",
     border: `1px solid ${brand.border}`,
-    borderRadius: "26px",
+    borderRadius: "20px",
     padding: "20px",
-    boxShadow: "0 14px 34px rgba(35,33,34,0.052)",
+    boxShadow: "0 2px 12px rgba(35,33,34,0.04)",
     display: "grid",
-    gap: "14px",
+    gap: "12px",
 };
 
 const cardAccentStyle: CSSProperties = {
@@ -850,6 +1001,35 @@ const cardTopStyle: CSSProperties = {
     justifyContent: "space-between",
     gap: "14px",
     alignItems: "center",
+};
+
+const cardIdentityStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    minWidth: 0,
+};
+
+const cardStatusStackStyle: CSSProperties = {
+    display: "grid",
+    gap: "5px",
+    justifyItems: "start",
+};
+
+const agentMiniLabelStyle: CSSProperties = {
+    color: "#8a9591",
+    fontSize: "11px",
+    fontWeight: 900,
+};
+
+const deadlinePillStyle: CSSProperties = {
+    display: "inline-flex",
+    padding: "7px 11px",
+    borderRadius: "999px",
+    border: "1px solid",
+    fontSize: "12px",
+    fontWeight: 900,
+    whiteSpace: "nowrap",
 };
 
 const idBoxStyle: CSSProperties = {
@@ -878,8 +1058,8 @@ const statusPillStyle: CSSProperties = {
 
 const cardBodyStyle: CSSProperties = {
     display: "grid",
-    gap: "6px",
-    minHeight: "112px",
+    gap: "4px",
+    minHeight: "80px",
 };
 
 const cardTitleStyle: CSSProperties = {
@@ -899,13 +1079,64 @@ const clientStyle: CSSProperties = {
 const descriptionStyle: CSSProperties = {
     margin: 0,
     color: "#475569",
-    lineHeight: 1.8,
+    lineHeight: 1.7,
     fontWeight: 600,
+    fontSize: "13px",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+};
+
+const agentRecommendationStyle: CSSProperties = {
+    border: "1px solid",
+    borderRadius: "14px",
+    padding: "10px 12px",
+    display: "grid",
+    gap: "6px",
+};
+
+const agentRecommendationHeaderStyle: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "10px",
+};
+
+const agentRecommendationTitleStyle: CSSProperties = {
+    color: brand.dark,
+    fontSize: "12px",
+    fontWeight: 950,
+};
+
+const agentRecommendationTextStyle: CSSProperties = {
+    margin: 0,
+    color: "#475569",
+    fontSize: "12px",
+    lineHeight: 1.65,
+    fontWeight: 700,
+};
+
+const agentChipRowStyle: CSSProperties = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "6px",
+};
+
+const agentChipStyle: CSSProperties = {
+    display: "inline-flex",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    border: `1px solid ${brand.border}`,
+    background: "rgba(255,255,255,0.72)",
+    color: "#51615c",
+    fontSize: "11px",
+    fontWeight: 900,
 };
 
 const insightRowStyle: CSSProperties = {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
     gap: "10px",
 };
 
@@ -952,24 +1183,41 @@ const cardActionsStyle: CSSProperties = {
 };
 
 const primarySmallButtonStyle: CSSProperties = {
-    ...primaryButtonStyle,
-    padding: "10px 14px",
-    borderRadius: "14px",
+    border: "0",
+    borderRadius: "12px",
+    padding: "9px 16px",
+    background: brand.dark,
+    color: "white",
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontSize: "13px",
+    boxShadow: "0 4px 12px rgba(35,33,34,0.16)",
 };
 
 const secondarySmallButtonStyle: CSSProperties = {
-    ...secondaryButtonStyle,
-    padding: "10px 13px",
-    borderRadius: "14px",
+    border: `1px solid ${brand.border}`,
+    borderRadius: "12px",
+    padding: "8px 13px",
+    background: "white",
+    color: brand.dark,
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontSize: "13px",
 };
 
 const ghostSmallButtonStyle: CSSProperties = {
-    border: "1px solid rgba(89,186,71,0.34)",
-    borderRadius: "14px",
-    padding: "10px 13px",
-    background: "rgba(89,186,71,0.08)",
+    border: "1px solid rgba(89,186,71,0.30)",
+    borderRadius: "12px",
+    padding: "8px 13px",
+    background: "rgba(89,186,71,0.07)",
     color: brand.greenDark,
     fontWeight: 900,
     textDecoration: "none",

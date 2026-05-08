@@ -268,22 +268,25 @@ type CompanyResourceGate = {
 };
 
 const COLORS = {
-    navy: "#0f172a",
-    navy2: "#111827",
-    page: "#f8fafc",
+    navy: "#232122",
+    navy2: "#1a1819",
+    page: "#F4F6F6",
     card: "#ffffff",
-    muted: "#64748b",
-    lightMuted: "#94a3b8",
-    border: "#e5e7eb",
-    softBorder: "#eef2f7",
-    blue: "#2563eb",
-    green: "#059669",
+    muted: "#66736f",
+    lightMuted: "#8a9591",
+    border: "#DFE7E4",
+    softBorder: "#eef2f0",
+    green: "#59BA47",
+    greenDark: "#3f9633",
     red: "#dc2626",
     orange: "#ea580c",
     amber: "#b45309",
     purple: "#7c3aed",
     teal: "#0f766e",
+    blue: "#1d4ed8",
 };
+
+const FONT = '"Thmanyah Sans","IBM Plex Sans Arabic","Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif';
 
 function getApiBaseUrl() {
     return process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -709,31 +712,33 @@ function AgentWorkflowStepper({
     return (
         <div
             style={{
-                background: "#ffffff",
-                border: "1px solid #e5e7eb",
+                background: COLORS.card,
+                border: `1px solid ${COLORS.border}`,
                 borderRadius: "18px",
-                padding: "14px 20px",
-                marginBottom: "14px",
-                boxShadow: "0 8px 22px rgba(15,23,42,0.035)",
+                padding: "0 20px",
+                boxShadow: "0 4px 16px rgba(35,33,34,0.04)",
                 display: "flex",
                 alignItems: "center",
                 gap: "0",
                 overflowX: "auto",
+                minHeight: "52px",
             }}
         >
+            {/* Label */}
             <span
                 style={{
-                    fontSize: "11px",
+                    fontSize: "10px",
                     fontWeight: 900,
-                    color: "#94a3b8",
+                    color: COLORS.lightMuted,
                     whiteSpace: "nowrap",
-                    marginLeft: "14px",
-                    paddingLeft: "14px",
-                    borderLeft: "1px solid #e5e7eb",
-                    letterSpacing: "0.04em",
+                    marginLeft: "16px",
+                    paddingLeft: "16px",
+                    borderLeft: `1px solid ${COLORS.border}`,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
                 }}
             >
-                سير عمل الوكيل
+                سير الوكيل
             </span>
 
             <div
@@ -758,38 +763,33 @@ function AgentWorkflowStepper({
                             style={{
                                 display: "flex",
                                 alignItems: "center",
-                                gap: "7px",
-                                padding: "7px 11px",
+                                gap: "6px",
+                                padding: "6px 10px",
                                 borderRadius: "999px",
                                 background: step.done
-                                    ? "rgba(89,186,71,0.10)"
+                                    ? "rgba(89,186,71,0.08)"
                                     : step.active
-                                        ? "rgba(37,99,235,0.09)"
+                                        ? "rgba(35,33,34,0.07)"
                                         : "transparent",
-                                border: step.done
-                                    ? "1px solid rgba(89,186,71,0.30)"
-                                    : step.active
-                                        ? "1px solid rgba(37,99,235,0.22)"
-                                        : "1px solid transparent",
                                 whiteSpace: "nowrap",
                             }}
                         >
                             <span
                                 style={{
-                                    width: "16px",
-                                    height: "16px",
+                                    width: "18px",
+                                    height: "18px",
                                     borderRadius: "999px",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    fontSize: "10px",
+                                    fontSize: "9px",
                                     fontWeight: 900,
                                     background: step.done
-                                        ? "#59BA47"
+                                        ? COLORS.green
                                         : step.active
-                                            ? "#2563eb"
-                                            : "#e5e7eb",
-                                    color: step.done || step.active ? "white" : "#94a3b8",
+                                            ? COLORS.navy
+                                            : COLORS.border,
+                                    color: step.done || step.active ? "white" : COLORS.lightMuted,
                                     flexShrink: 0,
                                 }}
                             >
@@ -797,17 +797,20 @@ function AgentWorkflowStepper({
                             </span>
                             <span
                                 style={{
-                                    fontSize: "12px",
-                                    fontWeight: 800,
+                                    fontSize: "11px",
+                                    fontWeight: 900,
                                     color: step.done
-                                        ? "#2d7a1e"
+                                        ? COLORS.greenDark
                                         : step.active
-                                            ? "#1d4ed8"
-                                            : "#94a3b8",
+                                            ? COLORS.navy
+                                            : COLORS.lightMuted,
                                 }}
                             >
                                 {step.label}
                             </span>
+                            {step.active && (
+                                <span style={{ width: 5, height: 5, borderRadius: "999px", background: COLORS.green, display: "inline-block", animation: "pulse 1.8s infinite" }} />
+                            )}
                         </div>
 
                         {idx < steps.length - 1 && (
@@ -815,11 +818,8 @@ function AgentWorkflowStepper({
                                 style={{
                                     flex: 1,
                                     height: "1px",
-                                    background: step.done
-                                        ? "#59BA47"
-                                        : "#e5e7eb",
-                                    minWidth: "8px",
-                                    opacity: step.done ? 0.5 : 1,
+                                    background: step.done ? `${COLORS.green}60` : COLORS.border,
+                                    minWidth: "6px",
                                 }}
                             />
                         )}
@@ -888,28 +888,32 @@ function PrimaryButton({
     children: ReactNode;
     onClick: () => void;
     disabled?: boolean;
-    tone?: "navy" | "teal" | "brown" | "light";
+    tone?: "navy" | "green" | "amber" | "light";
 }) {
     const styles: Record<string, CSSProperties> = {
         navy: {
             background: COLORS.navy,
             color: "white",
             border: "1px solid transparent",
+            boxShadow: "0 8px 20px rgba(35,33,34,0.18)",
         },
-        teal: {
-            background: COLORS.teal,
+        green: {
+            background: "linear-gradient(135deg, #3f9633, #59BA47)",
             color: "white",
             border: "1px solid transparent",
+            boxShadow: "0 8px 20px rgba(89,186,71,0.26)",
         },
-        brown: {
+        amber: {
             background: "#7c2d12",
             color: "white",
             border: "1px solid transparent",
+            boxShadow: "0 8px 20px rgba(124,45,18,0.22)",
         },
         light: {
-            background: "#f8fafc",
+            background: "white",
             color: COLORS.navy,
-            border: "1px solid #d1d5db",
+            border: `1px solid ${COLORS.border}`,
+            boxShadow: "0 2px 8px rgba(35,33,34,0.06)",
         },
     };
 
@@ -919,13 +923,17 @@ function PrimaryButton({
             disabled={disabled}
             style={{
                 ...styles[tone],
-                borderRadius: "12px",
-                padding: "11px 14px",
+                borderRadius: "14px",
+                padding: "10px 16px",
                 cursor: disabled ? "not-allowed" : "pointer",
-                opacity: disabled ? 0.68 : 1,
+                opacity: disabled ? 0.62 : 1,
                 fontWeight: 900,
-                boxShadow:
-                    tone === "light" ? "none" : "0 10px 20px rgba(15, 23, 42, 0.12)",
+                fontSize: "13px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                whiteSpace: "nowrap",
+                fontFamily: FONT,
             }}
         >
             {children}
@@ -938,74 +946,75 @@ function KpiCard({
     value,
     helper,
     accent,
+    trend,
 }: {
     label: string;
     value: string | number;
     helper?: string;
     accent: string;
+    trend?: "up" | "down" | "neutral";
 }) {
+    const isRisk = [COLORS.red, COLORS.orange].includes(accent);
+    const numVal = Number(String(value).replace("%", "").replace(/[^0-9.-]/g, ""));
+    const showRiskColor = isRisk && numVal > 0;
     return (
         <div
             style={{
                 background: COLORS.card,
                 border: `1px solid ${COLORS.border}`,
                 borderRadius: "18px",
-                padding: "17px",
-                boxShadow: "0 12px 30px rgba(15, 23, 42, 0.04)",
-                position: "relative",
                 overflow: "hidden",
+                display: "flex",
                 minHeight: "108px",
+                boxShadow: showRiskColor
+                    ? `0 4px 20px ${accent}18, 0 1px 4px rgba(35,33,34,0.04)`
+                    : "0 1px 8px rgba(35,33,34,0.05)",
             }}
         >
-            <div
-                style={{
-                    position: "absolute",
-                    insetInlineEnd: 0,
-                    insetBlockStart: 0,
-                    width: "7px",
-                    height: "100%",
-                    background: accent,
-                }}
-            />
+            {/* Left accent bar */}
+            <div style={{ width: "4px", background: accent, flexShrink: 0 }} />
 
-            <p
-                style={{
-                    margin: 0,
-                    color: COLORS.muted,
-                    fontSize: "13px",
-                    fontWeight: 800,
-                }}
-            >
-                {label}
-            </p>
-
-            <h3
-                style={{
-                    margin: "12px 0 4px",
-                    color: COLORS.navy,
-                    fontSize: "32px",
-                    lineHeight: 1,
-                    letterSpacing: "-0.03em",
-                }}
-            >
-                {value}
-            </h3>
-
-            {helper && (
-                <p
-                    style={{
-                        margin: 0,
-                        color: COLORS.lightMuted,
-                        fontSize: "12px",
-                        lineHeight: 1.7,
-                    }}
-                >
-                    {helper}
+            {/* Content */}
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, gap: "6px" }}>
+                {/* Label */}
+                <p style={{ margin: 0, fontSize: "10px", fontWeight: 900, color: COLORS.lightMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    {label}
                 </p>
-            )}
+
+                {/* Value */}
+                <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
+                    <span
+                        style={{
+                            fontSize: "36px",
+                            fontWeight: 950,
+                            letterSpacing: "-0.05em",
+                            lineHeight: 1,
+                            color: showRiskColor ? accent : COLORS.navy,
+                            fontFamily: FONT,
+                        }}
+                    >
+                        {value}
+                    </span>
+                    {trend === "up" && <span style={{ fontSize: "13px", color: COLORS.green, fontWeight: 900 }}>+</span>}
+                    {trend === "down" && <span style={{ fontSize: "13px", color: COLORS.red, fontWeight: 900 }}>–</span>}
+                </div>
+
+                {/* Helper */}
+                {helper && (
+                    <p style={{ margin: 0, fontSize: "11px", color: COLORS.lightMuted, lineHeight: 1.4, fontWeight: 700 }}>
+                        {helper}
+                    </p>
+                )}
+            </div>
+
+            {/* Right accent dot */}
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", padding: "14px 12px 14px 0" }}>
+                <div style={{ width: "8px", height: "8px", borderRadius: "999px", background: accent, opacity: 0.5 }} />
+            </div>
         </div>
     );
 }
+
 
 function ProgressBar({
     value,
@@ -1050,10 +1059,9 @@ function SectionCard({
             style={{
                 background: COLORS.card,
                 border: `1px solid ${COLORS.border}`,
-                borderRadius: "22px",
-                padding: "22px",
-                marginBottom: "22px",
-                boxShadow: "0 14px 36px rgba(15, 23, 42, 0.04)",
+                borderRadius: "20px",
+                padding: "20px",
+                boxShadow: "0 2px 12px rgba(35,33,34,0.04)",
                 ...style,
             }}
         >
@@ -1079,33 +1087,41 @@ function SectionHeader({
                 alignItems: "flex-start",
                 gap: "16px",
                 flexWrap: "wrap",
-                marginBottom: "18px",
+                marginBottom: "16px",
+                paddingBottom: "14px",
+                borderBottom: `1px solid ${COLORS.border}`,
             }}
         >
-            <div>
-                <h2
-                    style={{
-                        margin: 0,
-                        color: COLORS.navy,
-                        fontSize: "22px",
-                        lineHeight: 1.4,
-                        letterSpacing: "-0.02em",
-                    }}
-                >
-                    {title}
-                </h2>
-                {subtitle && (
-                    <p
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                {/* Green accent bar */}
+                <div style={{ width: "3px", background: COLORS.green, borderRadius: "999px", alignSelf: "stretch", flexShrink: 0, marginTop: "2px" }} />
+                <div>
+                    <h2
                         style={{
-                            margin: "8px 0 0",
-                            color: COLORS.muted,
-                            lineHeight: 1.9,
-                            maxWidth: "850px",
+                            margin: 0,
+                            color: COLORS.navy,
+                            fontSize: "18px",
+                            lineHeight: 1.4,
+                            letterSpacing: "-0.025em",
+                            fontWeight: 900,
                         }}
                     >
-                        {subtitle}
-                    </p>
-                )}
+                        {title}
+                    </h2>
+                    {subtitle && (
+                        <p
+                            style={{
+                                margin: "5px 0 0",
+                                color: COLORS.lightMuted,
+                                lineHeight: 1.7,
+                                fontSize: "13px",
+                                maxWidth: "800px",
+                            }}
+                        >
+                            {subtitle}
+                        </p>
+                    )}
+                </div>
             </div>
 
             {action}
@@ -1499,123 +1515,131 @@ export default function TenderDetailsPage() {
     }
 
     return (
-        <main dir="rtl" style={{ color: COLORS.navy }}>
+        <main dir="rtl" style={{ background: COLORS.page, minHeight: "100vh", padding: "0", fontFamily: FONT, color: COLORS.navy }}>
+            <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px 24px", display: "grid", gap: "12px" }}>
 
             {/* ── Agent Command Center Header ──────────────────────────── */}
             <div
                 style={{
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "22px",
-                    padding: "20px 24px",
-                    marginBottom: "14px",
-                    boxShadow: "0 10px 28px rgba(15,23,42,0.045)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "18px",
-                    flexWrap: "wrap",
                     position: "relative",
                     overflow: "hidden",
+                    background: "linear-gradient(135deg, #1c1b1c 0%, #232122 60%, #1a1819 100%)",
+                    borderRadius: "26px",
+                    boxShadow: "0 24px 60px rgba(35,33,34,0.22)",
                 }}
             >
-                {/* Left green accent stripe */}
+                {/* Green glow top-right */}
+                <div style={{ position: "absolute", insetInlineEnd: "-40px", top: "-60px", width: "300px", height: "300px", borderRadius: "999px", background: "rgba(89,186,71,0.10)", filter: "blur(60px)", pointerEvents: "none" }} />
+                {/* Green glow bottom-left */}
+                <div style={{ position: "absolute", insetInlineStart: "-20px", bottom: "-40px", width: "180px", height: "180px", borderRadius: "999px", background: "rgba(89,186,71,0.07)", filter: "blur(40px)", pointerEvents: "none" }} />
+                {/* Left accent stripe */}
+                <div style={{ position: "absolute", insetInlineStart: 0, top: 0, bottom: 0, width: "4px", background: "linear-gradient(180deg, #59BA47 0%, #3d8a2e 100%)", borderRadius: "26px 0 0 26px" }} />
+
+                {/* ─ Top bar: Logo + Status pills ─ */}
                 <div
                     style={{
-                        position: "absolute",
-                        insetInlineEnd: 0,
-                        top: 0,
-                        bottom: 0,
-                        width: "5px",
-                        background: "#59BA47",
-                        borderRadius: "0 22px 22px 0",
+                        position: "relative",
+                        zIndex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "14px 28px 12px",
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
                     }}
-                />
-
-                <div style={{ display: "grid", gap: "8px", flex: 1, minWidth: 0 }}>
-                    {/* Eyebrow */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                        <span
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "5px",
-                                padding: "5px 11px",
-                                borderRadius: "999px",
-                                background: "rgba(89,186,71,0.10)",
-                                color: "#2d7a1e",
-                                border: "1px solid rgba(89,186,71,0.28)",
-                                fontSize: "11px",
-                                fontWeight: 900,
-                                letterSpacing: "0.02em",
-                            }}
-                        >
-                            <span
-                                style={{
-                                    width: "6px",
-                                    height: "6px",
-                                    borderRadius: "999px",
-                                    background: "#59BA47",
-                                    display: "inline-block",
-                                }}
-                            />
-                            وكيل تحليل المنافسات · نشط
-                        </span>
-
-                        <Badge
-                            style={{
-                                background: translateStatus(tender.status) === "قيد المراجعة" ? "#f8fafc" :
-                                    translateStatus(tender.status) === "التجهيز للتقديم" ? "#eff6ff" :
-                                        translateStatus(tender.status) === "جاهز للتقديم" ? "#ecfdf5" :
-                                            "#fff7ed",
-                                color: translateStatus(tender.status) === "قيد المراجعة" ? "#475569" :
-                                    translateStatus(tender.status) === "التجهيز للتقديم" ? "#1d4ed8" :
-                                        translateStatus(tender.status) === "جاهز للتقديم" ? "#065f46" :
-                                            "#9a3412",
-                                border: "1px solid #e2e8f0",
-                            }}
-                        >
-                            {translateStatus(tender.status)}
-                        </Badge>
+                >
+                    {/* Brand logo */}
+                    <div style={{ minWidth: "130px", height: "56px", display: "flex", alignItems: "center", overflow: "visible", flexShrink: 0 }}>
+                        <img
+                            src="/brand/munjiz-logo-on-dark.png"
+                            alt="Munjiz"
+                            style={{ width: "120px", height: "auto", maxHeight: "52px", objectFit: "contain", display: "block" }}
+                        />
                     </div>
 
-                    {/* Title */}
-                    <h1
-                        style={{
-                            margin: 0,
-                            fontSize: "26px",
-                            lineHeight: 1.35,
-                            letterSpacing: "-0.03em",
-                            color: "#232122",
-                            fontWeight: 900,
-                        }}
-                    >
-                        {tender.title}
-                    </h1>
-
-                    {/* Agency + Deadline row */}
-                    <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", alignItems: "center" }}>
-                        {tender.client && (
-                            <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
-                                الجهة: {tender.client}
-                            </span>
-                        )}
-                        {tender.submission_deadline && (
-                            <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
-                                آخر موعد: {tender.submission_deadline.slice(0, 10)}
-                            </span>
-                        )}
-                        <span style={{ color: COLORS.muted, fontWeight: 800, fontSize: "14px" }}>
-                            الجاهزية: <strong style={{ color: decisionInternalReadinessScore >= 80 ? "#059669" : decisionInternalReadinessScore >= 50 ? "#b45309" : "#dc2626" }}>
-                                {decisionInternalReadinessScore}%
-                            </strong>
+                    {/* Live status pills */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 10px", borderRadius: "999px", background: "rgba(89,186,71,0.15)", color: "#7de86a", border: "1px solid rgba(89,186,71,0.25)", fontSize: "11px", fontWeight: 900, letterSpacing: "0.04em" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "999px", background: "#59BA47", display: "inline-block", boxShadow: "0 0 0 3px rgba(89,186,71,0.2)" }} />
+                            وكيل تحليل المنافسات · نشط
+                        </span>
+                        <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "999px", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.60)", border: "1px solid rgba(255,255,255,0.10)", fontSize: "11px", fontWeight: 800 }}>
+                            {translateStatus(tender.status)}
+                        </span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "999px", background: decisionVisual.accent + "22", color: decisionVisual.accent, border: `1px solid ${decisionVisual.accent}40`, fontSize: "11px", fontWeight: 900 }}>
+                            <span style={{ width: 5, height: 5, borderRadius: "999px", background: decisionVisual.accent, display: "inline-block" }} />
+                            {decisionVisual.label}
                         </span>
                     </div>
                 </div>
 
-                <PrimaryButton onClick={loadTenderData} tone="light">
-                    تحديث المركز
-                </PrimaryButton>
+                {/* ─ Main content: Title + Meta + Action ─ */}
+                <div
+                    style={{
+                        position: "relative",
+                        zIndex: 1,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-end",
+                        gap: "18px",
+                        flexWrap: "wrap",
+                        padding: "20px 28px 22px",
+                    }}
+                >
+                    <div style={{ display: "grid", gap: "8px", flex: 1, minWidth: 0 }}>
+                        {/* Tender title */}
+                        <h1 style={{ margin: 0, fontSize: "26px", lineHeight: 1.3, letterSpacing: "-0.03em", color: "#ffffff", fontWeight: 950 }}>
+                            {tender.title}
+                        </h1>
+
+                        {/* Meta row */}
+                        <div style={{ display: "flex", gap: "0", flexWrap: "wrap", alignItems: "center" }}>
+                            {tender.client && (
+                                <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 800, fontSize: "13px", paddingInlineEnd: "16px", borderInlineEnd: "1px solid rgba(255,255,255,0.10)" }}>
+                                    الجهة: <strong style={{ color: "rgba(255,255,255,0.80)" }}>{tender.client}</strong>
+                                </span>
+                            )}
+                            {tender.submission_deadline && (
+                                <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 800, fontSize: "13px", padding: "0 16px", borderInlineEnd: "1px solid rgba(255,255,255,0.10)" }}>
+                                    آخر موعد: <strong style={{ color: "rgba(255,255,255,0.80)" }}>{tender.submission_deadline.slice(0, 10)}</strong>
+                                </span>
+                            )}
+                            <span style={{ color: "rgba(255,255,255,0.45)", fontWeight: 800, fontSize: "13px", paddingInlineStart: tender.client || tender.submission_deadline ? "16px" : "0" }}>
+                                الجاهزية الداخلية:
+                                <strong style={{ color: decisionInternalReadinessScore >= 80 ? "#7de86a" : decisionInternalReadinessScore >= 50 ? "#fcd34d" : "#fca5a5", marginRight: "5px" }}>
+                                    {decisionInternalReadinessScore}%
+                                </strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Refresh action */}
+                    <button
+                        onClick={loadTenderData}
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "7px",
+                            padding: "10px 18px",
+                            borderRadius: "14px",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                            background: "rgba(255,255,255,0.08)",
+                            color: "rgba(255,255,255,0.85)",
+                            fontWeight: 900,
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            fontFamily: FONT,
+                            flexShrink: 0,
+                            backdropFilter: "blur(8px)",
+                            transition: "background 0.2s",
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                        </svg>
+                        تحديث المركز
+                    </button>
+                </div>
             </div>
 
             {/* ── Agent Workflow Stepper ───────────────────────────────── */}
@@ -1633,12 +1657,11 @@ export default function TenderDetailsPage() {
                 style={{
                     display: "flex",
                     gap: "4px",
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "18px",
+                    background: COLORS.card,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: "20px",
                     padding: "6px",
-                    marginBottom: "14px",
-                    boxShadow: "0 8px 22px rgba(15,23,42,0.035)",
+                    boxShadow: "0 4px 16px rgba(35,33,34,0.04)",
                     overflowX: "auto",
                 }}
             >
@@ -1659,50 +1682,26 @@ export default function TenderDetailsPage() {
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "6px",
-                                padding: "9px 16px",
-                                borderRadius: "13px",
+                                padding: "9px 15px",
+                                borderRadius: "15px",
                                 border: "none",
                                 cursor: "pointer",
                                 fontWeight: 900,
                                 fontSize: "13px",
                                 whiteSpace: "nowrap",
-                                transition: "background 0.15s, color 0.15s",
-                                background: isActive ? "#232122" : "transparent",
-                                color: isActive ? "#ffffff" : "#6B7280",
-                                boxShadow: isActive
-                                    ? "0 4px 14px rgba(35,33,34,0.18)"
-                                    : "none",
+                                fontFamily: FONT,
+                                background: isActive ? COLORS.green : "transparent",
+                                color: isActive ? "#ffffff" : COLORS.muted,
+                                boxShadow: isActive ? `0 4px 14px ${COLORS.green}38` : "none",
                             }}
                         >
-                            <span style={{ fontSize: "11px", opacity: isActive ? 1 : 0.6 }}>
-                                {tab.icon}
-                            </span>
+                            <span style={{ fontSize: "10px", opacity: isActive ? 1 : 0.5 }}>{tab.icon}</span>
                             {tab.label}
                             {tab.id === "gate" && submissionGate && (
-                                <span
-                                    style={{
-                                        width: "7px",
-                                        height: "7px",
-                                        borderRadius: "999px",
-                                        background: submissionGate.can_submit ? "#59BA47" : "#ef4444",
-                                        display: "inline-block",
-                                        marginRight: "2px",
-                                    }}
-                                />
+                                <span style={{ width: 7, height: 7, borderRadius: "999px", background: submissionGate.can_submit ? COLORS.green : COLORS.red, display: "inline-block" }} />
                             )}
                             {tab.id === "tasks" && suggestedTasks.length > 0 && (
-                                <span
-                                    style={{
-                                        background: isActive ? "rgba(255,255,255,0.22)" : "#F4F6F6",
-                                        color: isActive ? "white" : "#6B7280",
-                                        borderRadius: "999px",
-                                        padding: "1px 7px",
-                                        fontSize: "11px",
-                                        fontWeight: 900,
-                                        minWidth: "20px",
-                                        textAlign: "center",
-                                    }}
-                                >
+                                <span style={{ background: isActive ? "rgba(255,255,255,0.2)" : COLORS.page, color: isActive ? "white" : COLORS.muted, borderRadius: "999px", padding: "1px 7px", fontSize: "11px", fontWeight: 900 }}>
                                     {suggestedTasks.length}
                                 </span>
                             )}
@@ -1711,222 +1710,118 @@ export default function TenderDetailsPage() {
                 })}
             </div>
 
-            {/* ── Agent Decision Section (always visible) ──────────────── */}
-            <SectionCard
+            {/* ── Decision Intelligence Panel ─────────────────────────── */}
+            <div
                 style={{
-                    background: decisionVisual.gradient,
-                    color: "white",
-                    border: "none",
+                    background: COLORS.card,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: "20px",
                     overflow: "hidden",
-                    position: "relative",
+                    boxShadow: "0 4px 20px rgba(35,33,34,0.06)",
                 }}
             >
+                {/* Panel header bar */}
                 <div
                     style={{
-                        position: "absolute",
-                        insetInlineStart: "-90px",
-                        insetBlockStart: "-90px",
-                        width: "230px",
-                        height: "230px",
-                        background: "rgba(255,255,255,0.12)",
-                        borderRadius: "999px",
-                    }}
-                />
-
-                {/* Subtle dot-grid texture */}
-                <div
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        opacity: 0.06,
-                        backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-                        backgroundSize: "22px 22px",
-                        pointerEvents: "none",
-                    }}
-                />
-
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.25fr 0.75fr",
-                        gap: "22px",
-                        position: "relative",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 20px",
+                        background: COLORS.page,
+                        borderBottom: `1px solid ${COLORS.border}`,
                     }}
                 >
-                    <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px" }}>
-                            <Badge
-                                style={{
-                                    background: "rgba(255,255,255,0.16)",
-                                    color: "white",
-                                    border: "1px solid rgba(255,255,255,0.24)",
-                                }}
-                            >
-                                مركز قرار المنافسة
-                            </Badge>
-                            <Badge
-                                style={{
-                                    background: "rgba(255,255,255,0.12)",
-                                    color: "rgba(255,255,255,0.85)",
-                                    border: "1px solid rgba(255,255,255,0.18)",
-                                    fontSize: "11px",
-                                }}
-                            >
-                                {decisionVisual.label}
-                            </Badge>
-                        </div>
+                    <span style={{ fontSize: "10px", fontWeight: 900, color: COLORS.lightMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                        ذكاء القرار · تقييم الوكيل
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ padding: "3px 10px", borderRadius: "999px", background: decisionVisual.badgeBackground, color: decisionVisual.badgeColor, fontSize: "11px", fontWeight: 900, border: `1px solid ${decisionVisual.badgeColor}22` }}>
+                            {decisionVisual.label}
+                        </span>
+                        {decisionGate.tone === "conditional" && decisionInternalReadinessScore < 30 && (
+                            <span style={{ padding: "3px 10px", borderRadius: "999px", background: "#fffbeb", color: "#92400e", fontSize: "11px", fontWeight: 900, border: "1px solid #fde68a" }}>
+                                قرار مبدئي قابل للتحسن
+                            </span>
+                        )}
+                    </div>
+                </div>
 
-                        <h2
-                            style={{
-                                margin: "16px 0 8px",
-                                fontSize: "38px",
-                                lineHeight: 1.25,
-                                letterSpacing: "-0.04em",
-                            }}
-                        >
+                {/* Body */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr" }}>
+                    {/* Left: Verdict + reasoning + next action + stats */}
+                    <div
+                        style={{
+                            padding: "22px 24px",
+                            borderInlineEnd: `1px solid ${COLORS.border}`,
+                            position: "relative",
+                            display: "grid",
+                            gap: "14px",
+                            alignContent: "start",
+                        }}
+                    >
+                        {/* Accent stripe */}
+                        <div style={{ position: "absolute", insetBlockStart: 0, insetBlockEnd: 0, insetInlineEnd: "auto", insetInlineStart: 0, width: "4px", background: decisionVisual.accent, borderRadius: "0" }} />
+
+                        {/* Verdict */}
+                        <h2 style={{ margin: 0, fontSize: "32px", lineHeight: 1.15, letterSpacing: "-0.04em", color: COLORS.navy, fontWeight: 950 }}>
                             {decisionGate.decision}
                         </h2>
 
-                        <p
-                            style={{
-                                margin: 0,
-                                color: "rgba(255,255,255,0.88)",
-                                lineHeight: 1.9,
-                                fontSize: "15px",
-                                maxWidth: "900px",
-                            }}
-                        >
+                        {/* Reasoning */}
+                        <p style={{ margin: 0, color: COLORS.muted, lineHeight: 1.85, fontSize: "13px", borderRight: `2px solid ${COLORS.border}`, paddingRight: "12px" }}>
                             {decisionGate.mainReason}
                         </p>
 
-                        <div
-                            style={{
-                                marginTop: "18px",
-                                background: "rgba(255,255,255,0.14)",
-                                border: "1px solid rgba(255,255,255,0.22)",
-                                borderRadius: "16px",
-                                padding: "15px",
-                            }}
-                        >
-                            <p
-                                style={{
-                                    margin: "0 0 6px",
-                                    color: "rgba(255,255,255,0.72)",
-                                    fontWeight: 800,
-                                    fontSize: "13px",
-                                }}
-                            >
-                                الإجراء التالي المقترح
-                            </p>
-                            <p style={{ margin: 0, lineHeight: 1.9, fontWeight: 800 }}>
-                                {decisionGate.nextAction}
-                            </p>
+                        {/* Next action */}
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "12px 14px", borderRadius: "14px", background: COLORS.page, border: `1px solid ${COLORS.border}` }}>
+                            <span style={{ fontSize: "14px", color: COLORS.green, flexShrink: 0, marginTop: "2px", fontWeight: 900 }}>→</span>
+                            <div>
+                                <p style={{ margin: "0 0 3px", fontSize: "10px", fontWeight: 900, color: COLORS.lightMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>الإجراء التالي المقترح</p>
+                                <p style={{ margin: 0, fontWeight: 800, color: COLORS.navy, lineHeight: 1.6, fontSize: "13px" }}>{decisionGate.nextAction}</p>
+                            </div>
                         </div>
 
-                        {/* Quick stats row */}
-                        <div
-                            style={{
-                                marginTop: "14px",
-                                display: "flex",
-                                gap: "10px",
-                                flexWrap: "wrap",
-                            }}
-                        >
-                            <MiniStatPill label="متطلبات مغطاة" value={String(displayCoveredCount)} />
-                            <MiniStatPill label="فجوات مكتشفة" value={String(displayUncoveredCount)} />
-                            <MiniStatPill label="مستندات" value={String(displayDocumentsCount)} />
+                        {/* Mini stats row */}
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            {([
+                                { label: "مغطاة", value: displayCoveredCount, color: COLORS.green },
+                                { label: "فجوات", value: displayUncoveredCount, color: displayUncoveredCount > 0 ? COLORS.red : COLORS.green },
+                                { label: "مستندات", value: displayDocumentsCount, color: COLORS.blue },
+                            ] as { label: string; value: number; color: string }[]).map((s) => (
+                                <div key={s.label} style={{ padding: "5px 12px", borderRadius: "999px", background: COLORS.page, border: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: "5px" }}>
+                                    <strong style={{ fontSize: "14px", color: s.color, fontWeight: 950 }}>{s.value}</strong>
+                                    <span style={{ fontSize: "11px", color: COLORS.muted, fontWeight: 800 }}>{s.label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    <div
-                        style={{
-                            background: "rgba(255,255,255,0.14)",
-                            border: "1px solid rgba(255,255,255,0.22)",
-                            borderRadius: "20px",
-                            padding: "18px",
-                            backdropFilter: "blur(10px)",
-                        }}
-                    >
-                        <div style={{ marginBottom: "16px" }}>
-                            <p
-                                style={{
-                                    margin: "0 0 8px",
-                                    color: "rgba(255,255,255,0.72)",
-                                    fontWeight: 800,
-                                    fontSize: "13px",
-                                }}
-                            >
-                                ثقة الوكيل في القرار
-                            </p>
-                            <h3 style={{ margin: 0, fontSize: "28px" }}>
-                                {decisionGate.confidence}
-                            </h3>
+                    {/* Right: Confidence + score bars */}
+                    <div style={{ padding: "22px 20px", background: COLORS.page, display: "grid", gap: "14px", alignContent: "start" }}>
+                        {/* Confidence */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <p style={{ margin: 0, fontSize: "10px", fontWeight: 900, color: COLORS.lightMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>ثقة الوكيل</p>
+                            <span style={{ fontSize: "18px", fontWeight: 950, letterSpacing: "-0.02em", color: COLORS.navy }}>{decisionGate.confidence}</span>
                         </div>
-
-                        <div style={{ display: "grid", gap: "14px" }}>
-                            <div>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        marginBottom: "8px",
-                                        fontWeight: 900,
-                                    }}
-                                >
-                                    <span>الجاهزية الداخلية</span>
-                                    <span>
-                                        {decisionInternalReadinessScore}%
-                                    </span>
+                        <div style={{ height: "1px", background: COLORS.border }} />
+                        {([
+                            { label: "الجاهزية الداخلية", value: decisionInternalReadinessScore, color: COLORS.blue },
+                            { label: "تغطية الأدلة", value: combinedEvidenceCoverageScore, color: COLORS.green },
+                            ...(resourceGate ? [{ label: "مطابقة الموارد", value: resourceReadinessScore, color: COLORS.teal }] : []),
+                        ] as { label: string; value: number; color: string }[]).map((m) => (
+                            <div key={m.label}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontWeight: 800, fontSize: "12px", color: COLORS.navy }}>
+                                    <span>{m.label}</span>
+                                    <span style={{ color: m.value >= 80 ? COLORS.green : m.value >= 50 ? COLORS.amber : COLORS.red, fontWeight: 900 }}>{m.value}%</span>
                                 </div>
-                                <ProgressBar
-                                    value={decisionInternalReadinessScore}
-                                    color="#ffffff"
-                                />
+                                <div style={{ height: "6px", borderRadius: "999px", background: COLORS.border, overflow: "hidden" }}>
+                                    <div style={{ width: `${Math.max(0, Math.min(100, m.value))}%`, height: "100%", borderRadius: "999px", background: m.color }} />
+                                </div>
                             </div>
-
-                            <div>
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        marginBottom: "8px",
-                                        fontWeight: 900,
-                                    }}
-                                >
-                                    <span>تغطية الأدلة الشاملة</span>
-                                    <span>
-                                        {combinedEvidenceCoverageScore}%
-                                    </span>
-                                </div>
-                                <ProgressBar
-                                    value={combinedEvidenceCoverageScore}
-                                    color="#fde68a"
-                                />
-                            </div>
-
-                            {resourceGate && (
-                                <div>
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            justifyContent: "space-between",
-                                            marginBottom: "8px",
-                                            fontWeight: 900,
-                                        }}
-                                    >
-                                        <span>مطابقة موارد الشركة</span>
-                                        <span>{resourceReadinessScore}%</span>
-                                    </div>
-                                    <ProgressBar
-                                        value={resourceReadinessScore}
-                                        color="rgba(255,255,255,0.55)"
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        ))}
                     </div>
                 </div>
-            </SectionCard>
+            </div>
 
             {/* ══ TAB: بوابة التقديم ══════════════════════════════════ */}
             {activeTab === "gate" && submissionGate && (
@@ -2316,48 +2211,152 @@ export default function TenderDetailsPage() {
             {activeTab === "resources" && <CompanyResourceIntelligence />}
 
             {/* ══ TAB: نظرة عامة ═══════════════════════════════════════ */}
-            {activeTab === "overview" && <section
-                style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-                    gap: "14px",
-                    marginBottom: "22px",
-                }}
-            >
-                <KpiCard
-                    label="الجاهزية الداخلية"
-                    value={`${decisionInternalReadinessScore}%`}
-                    helper="حالة المتطلبات داخل النظام"
-                    accent={COLORS.blue}
-                />
-                <KpiCard
-                    label="تغطية الأدلة الشاملة"
-                    value={`${combinedEvidenceCoverageScore}%`}
-                    helper="مستندات المنافسة + أدلة الموارد"
-                    accent={COLORS.purple}
-                />
-                <KpiCard
-                    label="متطلبات مثبتة"
-                    value={displayCoveredCount}
-                    helper="مدعومة بأدلة كافية"
-                    accent={COLORS.green}
-                />
-                <KpiCard
-                    label="فجوات أدلة"
-                    value={displayUncoveredCount}
-                    helper="تحتاج معالجة قبل التقديم"
-                    accent={COLORS.red}
-                />
-                <KpiCard
-                    label="مستندات مرفوعة"
-                    value={displayDocumentsCount}
-                    helper="ضمن مساحة المنافسة"
-                    accent={COLORS.orange}
-                />
-            </section>}
+            {activeTab === "overview" && (() => {
+                const isNewTender = decisionInternalReadinessScore < 30 && displayDocumentsCount === 0;
+                const hasDocsButWeakCoverage = displayDocumentsCount > 0 && combinedEvidenceCoverageScore < 50;
+                const nextActionText = displayDocumentsCount === 0
+                    ? "الإجراء التالي المقترح: ارفع كراسة المنافسة أو مستندات داعمة قبل تحليل التغطية."
+                    : hasDocsButWeakCoverage
+                        ? "الإجراء التالي المقترح: شغّل استخراج النص ثم تحليل التغطية لتقليل فجوات الأدلة."
+                        : null;
+                return (
+                    <>
+                        {isNewTender && (
+                            <section
+                                style={{
+                                    border: "1px solid rgba(89,186,71,0.28)",
+                                    borderRadius: "22px",
+                                    padding: "22px",
+                                    marginBottom: "16px",
+                                    background: "linear-gradient(135deg, #fff 0%, #f0fdf4 100%)",
+                                    boxShadow: "0 12px 32px rgba(35,33,34,0.055)",
+                                }}
+                            >
+                                <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginBottom: "18px" }}>
+                                    <div
+                                        style={{
+                                            width: 44, height: 44, borderRadius: "14px",
+                                            background: "rgba(89,186,71,0.12)",
+                                            display: "grid", placeItems: "center",
+                                            fontSize: "22px", flexShrink: 0,
+                                        }}
+                                    >◉</div>
+                                    <div>
+                                        <p style={{ margin: "0 0 4px", fontWeight: 900, fontSize: "16px", color: "#232122" }}>
+                                            جاهزية أولية بعد إنشاء مركز القرار
+                                        </p>
+                                        <p style={{ margin: 0, color: "#64748b", lineHeight: 1.8, fontSize: "14px", fontWeight: 650 }}>
+                                            تم إنشاء المنافسة من الكراسة، والوكيل يحتاج الآن إلى تشغيل مراحل التحليل لاستكمال الأدلة والموارد والفجوات.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                        gap: "10px",
+                                    }}
+                                >
+                                    {([
+                                        { icon: "◈", title: "قراءة المستندات", text: "رفع الكراسة ومستندات الدعم لبدء استخراج النص الذكي." },
+                                        { icon: "◇", title: "تحليل تغطية الأدلة", text: "ربط المستندات بالمتطلبات واكتشاف الفجوات تلقائياً." },
+                                        { icon: "◆", title: "مطابقة موارد الشركة", text: "تحديد موارد الشركة التي تدعم المتطلبات الرئيسية." },
+                                        { icon: "⊛", title: "إغلاق فجوات التقديم", text: "توليد مهام الفجوات وبوابة التقديم النهائية." },
+                                    ] as { icon: string; title: string; text: string }[]).map((card) => (
+                                        <div
+                                            key={card.title}
+                                            style={{
+                                                background: "white",
+                                                border: "1px solid #DFE7E4",
+                                                borderRadius: "18px",
+                                                padding: "16px",
+                                                boxShadow: "0 4px 14px rgba(35,33,34,0.04)",
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                                <span style={{ fontSize: "16px", color: "#3f9633" }}>{card.icon}</span>
+                                                <strong style={{ fontSize: "14px", color: "#232122" }}>{card.title}</strong>
+                                            </div>
+                                            <p style={{ margin: 0, color: "#64748b", fontSize: "13px", lineHeight: 1.7, fontWeight: 650 }}>
+                                                {card.text}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {nextActionText && (
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "10px",
+                                    padding: "13px 18px",
+                                    borderRadius: "16px",
+                                    background: "#fffbeb",
+                                    border: "1px solid #fde68a",
+                                    marginBottom: "16px",
+                                    fontWeight: 800,
+                                    color: "#92400e",
+                                    lineHeight: 1.7,
+                                    fontSize: "14px",
+                                }}
+                            >
+                                <span style={{ fontSize: "18px", flexShrink: 0 }}>→</span>
+                                <span>{nextActionText}</span>
+                            </div>
+                        )}
+
+                        {/* ── Intelligence Metrics Bento ───────────────── */}
+                        <div
+                            style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                                gap: "10px",
+                                marginBottom: "18px",
+                            }}
+                        >
+                            <KpiCard
+                                label="الجاهزية الداخلية"
+                                value={`${decisionInternalReadinessScore}%`}
+                                helper="حالة المتطلبات داخل النظام"
+                                accent={COLORS.blue}
+                            />
+                            <KpiCard
+                                label="تغطية الأدلة"
+                                value={`${combinedEvidenceCoverageScore}%`}
+                                helper="مستندات المنافسة + الموارد"
+                                accent={COLORS.green}
+                            />
+                            <KpiCard
+                                label="متطلبات مثبتة"
+                                value={displayCoveredCount}
+                                helper="مدعومة بأدلة كافية"
+                                accent={COLORS.teal}
+                            />
+                            <KpiCard
+                                label="فجوات أدلة"
+                                value={displayUncoveredCount}
+                                helper="تحتاج معالجة"
+                                accent={displayUncoveredCount > 0 ? COLORS.red : COLORS.green}
+                            />
+                            <KpiCard
+                                label="مستندات مرفوعة"
+                                value={displayDocumentsCount}
+                                helper="ضمن مساحة المنافسة"
+                                accent={COLORS.purple}
+                            />
+                        </div>
+                    </>
+                );
+            })()}
 
             {activeTab === "overview" && <SectionCard>
-                <SectionHeader title="معلومات المنافسة" subtitle="البيانات الأساسية التي يبني عليها الوكيل قرار الدخول." />
+                <SectionHeader
+                    title="معلومات المنافسة"
+                    subtitle="البيانات الأساسية التي يبني عليها الوكيل قرار الدخول."
+                />
 
                 <div
                     style={{
@@ -2366,35 +2365,47 @@ export default function TenderDetailsPage() {
                         gap: "12px",
                     }}
                 >
-                    {[
-                        ["الجهة", tender.client],
-                        ["الحالة", translateStatus(tender.status)],
-                        ["آخر موعد للتقديم", tender.submission_deadline],
-                        ["الوصف", tender.description],
-                    ].map(([label, value]) => (
+                    {([
+                        { label: "الجهة", value: tender.client, icon: "◎" },
+                        { label: "الحالة", value: translateStatus(tender.status), icon: "◈" },
+                        { label: "آخر موعد للتقديم", value: tender.submission_deadline?.slice(0, 10) || "-", icon: "◇" },
+                    ] as { label: string; value: string; icon: string }[]).map(({ label, value, icon }) => (
                         <div
                             key={label}
                             style={{
                                 background: "#f8fafc",
                                 border: `1px solid ${COLORS.softBorder}`,
-                                borderRadius: "16px",
-                                padding: "14px",
+                                borderRadius: "18px",
+                                padding: "16px 18px",
+                                display: "grid",
+                                gap: "6px",
                             }}
                         >
-                            <p
-                                style={{
-                                    margin: "0 0 8px",
-                                    color: COLORS.lightMuted,
-                                    fontSize: "12px",
-                                    fontWeight: 800,
-                                }}
-                            >
-                                {label}
-                            </p>
-                            <strong style={{ lineHeight: 1.8 }}>{value}</strong>
+                            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                                <span style={{ fontSize: "12px", color: "#3f9633", opacity: 0.8 }}>{icon}</span>
+                                <p style={{ margin: 0, color: COLORS.lightMuted, fontSize: "12px", fontWeight: 800 }}>
+                                    {label}
+                                </p>
+                            </div>
+                            <strong style={{ lineHeight: 1.6, fontSize: "15px", color: COLORS.navy }}>{value}</strong>
                         </div>
                     ))}
                 </div>
+
+                {tender.description && (
+                    <div
+                        style={{
+                            marginTop: "12px",
+                            background: "#f8fafc",
+                            border: `1px solid ${COLORS.softBorder}`,
+                            borderRadius: "18px",
+                            padding: "16px 18px",
+                        }}
+                    >
+                        <p style={{ margin: "0 0 8px", color: COLORS.lightMuted, fontSize: "12px", fontWeight: 800 }}>الوصف</p>
+                        <p style={{ margin: 0, lineHeight: 1.9, color: COLORS.navy, fontWeight: 700 }}>{tender.description}</p>
+                    </div>
+                )}
             </SectionCard>}
 
             {/* ══ TAB: نظرة عامة — internal readiness (shown below docs matrix) ══ */}
@@ -3289,7 +3300,7 @@ export default function TenderDetailsPage() {
                                             <PrimaryButton
                                                 onClick={() => analyzeDocumentCoverage(document.id)}
                                                 disabled={analyzingCoverageDocumentId === document.id}
-                                                tone="teal"
+                                                tone="green"
                                             >
                                                 {analyzingCoverageDocumentId === document.id
                                                     ? "جارٍ التحليل..."
@@ -3299,7 +3310,7 @@ export default function TenderDetailsPage() {
                                             <PrimaryButton
                                                 onClick={() => createGapTasksFromDocument(document.id)}
                                                 disabled={creatingGapTasksDocumentId === document.id}
-                                                tone="brown"
+                                                tone="amber"
                                             >
                                                 {creatingGapTasksDocumentId === document.id
                                                     ? "جارٍ إنشاء المهام..."
@@ -3476,96 +3487,713 @@ export default function TenderDetailsPage() {
             )}
 
             {/* ══ TAB: مهام الفجوات ══════════════════════════════════════ */}
-            {activeTab === "tasks" && <SectionCard>
-                <SectionHeader
-                    title="المهام المقترحة من الوكيل"
-                    subtitle="مهام يتم توليدها من المتطلبات غير المغطاة أو المغطاة جزئيًا."
-                    action={
-                        <PrimaryButton
-                            onClick={approveSuggestedTasks}
-                            disabled={approving || suggestedTasks.length === 0}
-                        >
-                            {approving ? "جارٍ الاعتماد..." : "اعتماد المهام المقترحة"}
-                        </PrimaryButton>
+            {activeTab === "tasks" && (() => {
+                type DisplayGapTask = {
+                    id: string;
+                    title: string;
+                    description: string;
+                    owner: string;
+                    priority: string;
+                    status: string;
+                    reason: string;
+                    linkedRequirementId: number | null;
+                    category: string;
+                    linkedEvidenceName?: string;
+                    recommendedAction: string;
+                    source: "real" | "evidence";
+                };
+
+                const normalizeTaskText = (value?: string | number | null) =>
+                    String(value ?? "").trim();
+
+                const isCoveredPartially = (status: string) => {
+                    const normalized = normalizeTaskText(status);
+                    return normalized === "مغطى جزئيًا" || normalized === "مغطى جزئياً";
+                };
+
+                const isEvidenceGapItem = (item: RequirementDocumentCoverage) => {
+                    const status = normalizeTaskText(item.best_document_coverage_status);
+                    const confidence = normalizeTaskText(item.confidence).toLowerCase();
+                    const reason = normalizeTaskText(item.reason).toLowerCase();
+
+                    return (
+                        status === "غير مغطى" ||
+                        isCoveredPartially(status) ||
+                        confidence.includes("منخفض") ||
+                        confidence.includes("low") ||
+                        confidence.includes("متوسط") ||
+                        confidence.includes("medium") ||
+                        reason.includes("غير كاف") ||
+                        reason.includes("لا توجد") ||
+                        reason.includes("لم يتم")
+                    );
+                };
+
+                const realDisplayTasks: DisplayGapTask[] = suggestedTasks.map((task) => {
+                    const evidenceMatch = documentsCoverageSummary?.requirements_document_coverage.find(
+                        (item) => item.requirement_id === task.linked_requirement_id
+                    );
+
+                    return {
+                        id: `real-${task.id}`,
+                        title: task.title || "مهمة فجوة مقترحة",
+                        description: task.reason || "مهمة مولدة من الوكيل لمعالجة فجوة مرتبطة بالمنافسة.",
+                        owner: task.owner || "غير محدد",
+                        priority: task.priority || "متوسطة",
+                        status: task.status || "مفتوحة",
+                        reason: task.reason || "تم إنشاء المهمة بناءً على فجوة في المتطلبات أو الأدلة.",
+                        linkedRequirementId: task.linked_requirement_id || null,
+                        category: task.category || "فجوة تشغيلية",
+                        linkedEvidenceName: evidenceMatch?.best_evidence_document?.document_name,
+                        recommendedAction: "نفّذ المهمة أو ارفع المستند الداعم ثم أعد تحليل التغطية.",
+                        source: "real",
+                    };
+                });
+
+                const evidenceGapItems =
+                    documentsCoverageSummary?.requirements_document_coverage.filter(isEvidenceGapItem) ?? [];
+
+                const fallbackDisplayTasks: DisplayGapTask[] = evidenceGapItems.map((item) => {
+                    const status = normalizeTaskText(item.best_document_coverage_status);
+                    const isUncovered = status === "غير مغطى";
+                    const isPartial = isCoveredPartially(status);
+                    const linkedDocumentName = item.best_evidence_document?.document_name;
+
+                    return {
+                        id: `evidence-gap-${item.requirement_id}`,
+                        title: isUncovered
+                            ? `رفع دليل داعم للمتطلب: ${item.requirement_title}`
+                            : isPartial
+                                ? `تدعيم الدليل المرتبط بالمتطلب: ${item.requirement_title}`
+                                : `مراجعة قوة الدليل للمتطلب: ${item.requirement_title}`,
+                        description: isUncovered
+                            ? "المتطلب غير مثبت بدليل مباشر داخل مستندات المنافسة، ويحتاج مستندًا داعمًا قبل اعتماد التقديم."
+                            : isPartial
+                                ? "يوجد مؤشر أو مستند مرتبط، لكنه لا يثبت المتطلب بدرجة كافية لاعتماده ضمن ملف التقديم."
+                                : "ثقة الوكيل في الدليل ليست كافية، لذلك يحتاج المتطلب إلى مراجعة أو تدعيم مستندي.",
+                        owner: "يُعيّن من مدير المنافسة",
+                        priority: item.priority || "متوسطة",
+                        status: "مقترحة من فجوة دليل",
+                        reason: item.reason || "تم اشتقاق المهمة من مصفوفة الأدلة بسبب ضعف أو نقص التغطية.",
+                        linkedRequirementId: item.requirement_id,
+                        category: item.category || "فجوة أدلة",
+                        linkedEvidenceName: linkedDocumentName,
+                        recommendedAction: isUncovered
+                            ? "رفع دليل مباشر يثبت المتطلب أو إنشاء مهمة فجوة لمعالجته."
+                            : "استكمال الدليل الداعم أو رفع مستند أكثر تحديدًا قبل اعتماد التقديم.",
+                        source: "evidence",
+                    };
+                });
+
+                const displayedTasks = realDisplayTasks.length > 0 ? realDisplayTasks : fallbackDisplayTasks;
+                const isFallbackMode = realDisplayTasks.length === 0 && fallbackDisplayTasks.length > 0;
+
+                const isClosedTask = (task: DisplayGapTask) => {
+                    const status = normalizeTaskText(task.status).toLowerCase();
+                    return (
+                        status.includes("closed") ||
+                        status.includes("done") ||
+                        status.includes("مغلقة") ||
+                        status.includes("مكتملة") ||
+                        status.includes("منتهية")
+                    );
+                };
+
+                const isWaitingReviewTask = (task: DisplayGapTask) => {
+                    const status = normalizeTaskText(task.status).toLowerCase();
+                    return (
+                        status.includes("review") ||
+                        status.includes("waiting") ||
+                        status.includes("مراجعة") ||
+                        status.includes("بانتظار") ||
+                        status.includes("انتظار")
+                    );
+                };
+
+                const isHighPriorityTask = (task: DisplayGapTask) => {
+                    const priority = normalizeTaskText(task.priority).toLowerCase();
+                    return (
+                        priority.includes("high") ||
+                        priority.includes("critical") ||
+                        priority.includes("عالية") ||
+                        priority.includes("حرجة")
+                    );
+                };
+
+                const getTaskStatusMeta = (task: DisplayGapTask) => {
+                    if (isFallbackMode) {
+                        return {
+                            label: task.status,
+                            background: "#fff7ed",
+                            color: "#9a3412",
+                            border: "1px solid #fed7aa",
+                            accent: COLORS.amber,
+                            nextAction: task.recommendedAction,
+                        };
                     }
-                />
 
-                {approvalMessage && (
-                    <div
-                        style={{
-                            background: approvalMessage.includes("تعذر") ? "#fef2f2" : "#ecfdf5",
-                            color: approvalMessage.includes("تعذر") ? "#991b1b" : "#065f46",
-                            border: approvalMessage.includes("تعذر")
-                                ? "1px solid #fecaca"
-                                : "1px solid #a7f3d0",
-                            borderRadius: "14px",
-                            padding: "13px",
-                            marginBottom: "12px",
-                            fontWeight: 800,
-                        }}
-                    >
-                        {approvalMessage}
-                    </div>
-                )}
+                    if (isClosedTask(task)) {
+                        return {
+                            label: "مغلقة",
+                            background: "#ecfdf5",
+                            color: "#065f46",
+                            border: "1px solid #a7f3d0",
+                            accent: COLORS.green,
+                            nextAction: "تمت المعالجة. يمكن استخدام المخرجات ضمن مراجعة التقديم.",
+                        };
+                    }
 
-                {suggestedTasks.length === 0 ? (
-                    <p style={{ color: COLORS.muted, marginBottom: 0 }}>
-                        لا توجد مهام مقترحة حاليًا.
-                    </p>
-                ) : (
-                    <div style={{ display: "grid", gap: "10px" }}>
-                        {suggestedTasks.map((task) => (
+                    if (isWaitingReviewTask(task)) {
+                        return {
+                            label: "بانتظار مراجعة",
+                            background: "#fffbeb",
+                            color: "#92400e",
+                            border: "1px solid #fde68a",
+                            accent: COLORS.amber,
+                            nextAction: "راجع المخرجات واربطها بالدليل المناسب قبل اعتماد الإغلاق.",
+                        };
+                    }
+
+                    return {
+                        label: task.status || "مفتوحة",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        border: "1px solid #bfdbfe",
+                        accent: COLORS.blue,
+                        nextAction: task.recommendedAction || "نفّذ المهمة أو ارفع المستند الداعم ثم أعد تحليل التغطية.",
+                    };
+                };
+
+                const openTasks = displayedTasks.filter((task) => !isClosedTask(task));
+                const waitingReviewTasks = displayedTasks.filter(isWaitingReviewTask);
+                const closedTasks = displayedTasks.filter(isClosedTask);
+                const highPriorityTasks = displayedTasks.filter(isHighPriorityTask);
+
+                const taskGroups: {
+                    title: string;
+                    subtitle: string;
+                    tasks: DisplayGapTask[];
+                    empty: string;
+                }[] = [
+                        {
+                            title: "عاجلة / عالية الأولوية",
+                            subtitle: "الفجوات التي تؤثر مباشرة على قرار التقديم.",
+                            tasks: highPriorityTasks,
+                            empty: "لا توجد مهام عالية الأولوية حالياً.",
+                        },
+                        {
+                            title: "مفتوحة وقيد المعالجة",
+                            subtitle: "مهام يجب تنفيذها قبل اعتماد بوابة التقديم.",
+                            tasks: openTasks.filter((task) => !isWaitingReviewTask(task) && !isHighPriorityTask(task)),
+                            empty: "لا توجد مهام مفتوحة خارج الأولويات العالية.",
+                        },
+                        {
+                            title: "بانتظار مراجعة",
+                            subtitle: "مخرجات تحتاج اعتماد أو ربط نهائي بالدليل.",
+                            tasks: waitingReviewTasks.filter((task) => !isHighPriorityTask(task)),
+                            empty: "لا توجد مهام بانتظار المراجعة.",
+                        },
+                        {
+                            title: "مغلقة",
+                            subtitle: "مهام تم إغلاقها ويمكن الرجوع لها كسجل تشغيلي.",
+                            tasks: closedTasks,
+                            empty: "لا توجد مهام مغلقة حالياً.",
+                        },
+                    ];
+
+                const renderTaskCard = (task: DisplayGapTask) => {
+                    const statusMeta = getTaskStatusMeta(task);
+                    const linkedRequirement = requirements.find(
+                        (requirement) => requirement.id === task.linkedRequirementId
+                    );
+
+                    return (
+                        <div
+                            key={task.id}
+                            style={{
+                                background: "#ffffff",
+                                border: "1px solid #DFE7E4",
+                                borderInlineStart: `5px solid ${statusMeta.accent}`,
+                                borderRadius: "18px",
+                                padding: "15px",
+                                boxShadow: "0 12px 26px rgba(15,23,42,0.035)",
+                            }}
+                        >
                             <div
-                                key={task.id}
                                 style={{
-                                    background: "#f8fafc",
-                                    border: `1px solid ${COLORS.border}`,
-                                    borderRadius: "16px",
-                                    padding: "14px",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    gap: "12px",
+                                    flexWrap: "wrap",
+                                    marginBottom: "10px",
+                                }}
+                            >
+                                <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            gap: "7px",
+                                            flexWrap: "wrap",
+                                            marginBottom: "8px",
+                                        }}
+                                    >
+                                        <Badge style={getPriorityStyle(task.priority)}>
+                                            {task.priority || "أولوية غير محددة"}
+                                        </Badge>
+                                        <Badge
+                                            style={{
+                                                background: statusMeta.background,
+                                                color: statusMeta.color,
+                                                border: statusMeta.border,
+                                            }}
+                                        >
+                                            {statusMeta.label}
+                                        </Badge>
+                                        {task.source === "evidence" && (
+                                            <Badge
+                                                style={{
+                                                    background: "#fff7ed",
+                                                    color: "#9a3412",
+                                                    border: "1px solid #fed7aa",
+                                                }}
+                                            >
+                                                مشتقة من الأدلة
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    <h3
+                                        style={{
+                                            margin: 0,
+                                            color: COLORS.navy,
+                                            fontSize: "17px",
+                                            lineHeight: 1.7,
+                                        }}
+                                    >
+                                        {task.title}
+                                    </h3>
+
+                                    <p
+                                        style={{
+                                            margin: "8px 0 0",
+                                            color: COLORS.muted,
+                                            lineHeight: 1.8,
+                                            fontSize: "13px",
+                                        }}
+                                    >
+                                        {task.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                                    gap: "9px",
+                                    marginBottom: "10px",
                                 }}
                             >
                                 <div
                                     style={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        gap: "12px",
-                                        flexWrap: "wrap",
-                                        marginBottom: "8px",
+                                        background: "#f8fafc",
+                                        border: "1px solid #eef2f7",
+                                        borderRadius: "13px",
+                                        padding: "10px",
                                     }}
                                 >
-                                    <h3 style={{ margin: 0, fontSize: "16px", lineHeight: 1.7 }}>
-                                        {task.title}
-                                    </h3>
-
-                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                        <Badge style={getPriorityStyle(task.priority)}>
-                                            {task.priority}
-                                        </Badge>
-                                        <Badge
-                                            style={{
-                                                background: "#eff6ff",
-                                                color: "#1d4ed8",
-                                                border: "1px solid #bfdbfe",
-                                            }}
-                                        >
-                                            {task.status}
-                                        </Badge>
-                                    </div>
+                                    <p
+                                        style={{
+                                            margin: "0 0 5px",
+                                            color: COLORS.lightMuted,
+                                            fontSize: "11px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        المسؤول
+                                    </p>
+                                    <strong style={{ color: COLORS.navy, fontSize: "13px" }}>
+                                        {task.owner || "غير محدد"}
+                                    </strong>
                                 </div>
 
-                                <p style={{ margin: "0 0 6px", color: COLORS.muted }}>
-                                    <strong>المالك:</strong> {task.owner} ·{" "}
-                                    <strong>التصنيف:</strong> {task.category}
+                                <div
+                                    style={{
+                                        background: "#f8fafc",
+                                        border: "1px solid #eef2f7",
+                                        borderRadius: "13px",
+                                        padding: "10px",
+                                    }}
+                                >
+                                    <p
+                                        style={{
+                                            margin: "0 0 5px",
+                                            color: COLORS.lightMuted,
+                                            fontSize: "11px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        المتطلب المرتبط
+                                    </p>
+                                    <strong style={{ color: COLORS.navy, fontSize: "13px", lineHeight: 1.7 }}>
+                                        {task.linkedRequirementId
+                                            ? `${linkedRequirement?.title || "متطلب رقم"} ${linkedRequirement ? "" : task.linkedRequirementId}`
+                                            : "غير مرتبط بمتطلب محدد"}
+                                    </strong>
+                                </div>
+
+                                <div
+                                    style={{
+                                        background: "#f8fafc",
+                                        border: "1px solid #eef2f7",
+                                        borderRadius: "13px",
+                                        padding: "10px",
+                                    }}
+                                >
+                                    <p
+                                        style={{
+                                            margin: "0 0 5px",
+                                            color: COLORS.lightMuted,
+                                            fontSize: "11px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        الدليل المرتبط
+                                    </p>
+                                    <strong
+                                        style={{
+                                            color: task.linkedEvidenceName ? COLORS.navy : COLORS.lightMuted,
+                                            fontSize: "13px",
+                                            lineHeight: 1.7,
+                                            wordBreak: "break-word",
+                                        }}
+                                    >
+                                        {task.linkedEvidenceName || "بانتظار رفع أو ربط دليل داعم"}
+                                    </strong>
+                                </div>
+                            </div>
+
+                            <div
+                                style={{
+                                    background: "#f8fafc",
+                                    border: "1px solid #eef2f7",
+                                    borderRadius: "14px",
+                                    padding: "11px",
+                                    marginBottom: "10px",
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        margin: "0 0 5px",
+                                        color: COLORS.lightMuted,
+                                        fontSize: "11px",
+                                        fontWeight: 900,
+                                    }}
+                                >
+                                    سبب المهمة
                                 </p>
-                                <p style={{ margin: 0, color: COLORS.muted, lineHeight: 1.9 }}>
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        color: COLORS.muted,
+                                        fontSize: "13px",
+                                        lineHeight: 1.8,
+                                    }}
+                                >
                                     {task.reason}
                                 </p>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </SectionCard>}
 
+                            <div
+                                style={{
+                                    background: statusMeta.background,
+                                    border: statusMeta.border,
+                                    borderRadius: "14px",
+                                    padding: "11px",
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        margin: "0 0 5px",
+                                        color: statusMeta.color,
+                                        fontSize: "11px",
+                                        fontWeight: 900,
+                                    }}
+                                >
+                                    الإجراء التالي
+                                </p>
+                                <strong
+                                    style={{
+                                        color: statusMeta.color,
+                                        fontSize: "13px",
+                                        lineHeight: 1.7,
+                                    }}
+                                >
+                                    {statusMeta.nextAction}
+                                </strong>
+                            </div>
+                        </div>
+                    );
+                };
+
+                return (
+                    <div style={{ display: "grid", gap: "16px" }}>
+                        <SectionCard
+                            style={{
+                                border: "1px solid #DFE7E4",
+                                background: "linear-gradient(135deg, #ffffff 0%, #F4F6F6 100%)",
+                            }}
+                        >
+                            <SectionHeader
+                                title="لوحة إغلاق الفجوات"
+                                subtitle="مهام تشغيلية مولدة من الوكيل لمعالجة الفجوات التي تمنع أو تضعف قرار التقديم."
+                                action={
+                                    suggestedTasks.length > 0 ? (
+                                        <PrimaryButton
+                                            onClick={approveSuggestedTasks}
+                                            disabled={approving || suggestedTasks.length === 0}
+                                        >
+                                            {approving ? "جارٍ الاعتماد" : "اعتماد المهام المقترحة"}
+                                        </PrimaryButton>
+                                    ) : isFallbackMode ? (
+                                        <Badge
+                                            style={{
+                                                background: "#fff7ed",
+                                                color: "#9a3412",
+                                                border: "1px solid #fed7aa",
+                                            }}
+                                        >
+                                            مهام مشتقة من فجوات الأدلة
+                                        </Badge>
+                                    ) : (
+                                        <PrimaryButton
+                                            onClick={approveSuggestedTasks}
+                                            disabled={true}
+                                        >
+                                            اعتماد المهام المقترحة
+                                        </PrimaryButton>
+                                    )
+                                }
+                            />
+
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))",
+                                    gap: "12px",
+                                    marginBottom: "16px",
+                                }}
+                            >
+                                <KpiCard
+                                    label="إجمالي مهام الفجوات"
+                                    value={displayedTasks.length}
+                                    helper={isFallbackMode ? "حقيقية + مشتقة من الأدلة" : "كل المهام المقترحة من الوكيل"}
+                                    accent={COLORS.navy}
+                                />
+                                <KpiCard
+                                    label="مهام مفتوحة"
+                                    value={openTasks.length}
+                                    helper="تحتاج معالجة قبل التقديم"
+                                    accent={COLORS.blue}
+                                />
+                                <KpiCard
+                                    label="بانتظار مراجعة"
+                                    value={waitingReviewTasks.length}
+                                    helper="تحتاج اعتماد المخرجات"
+                                    accent={COLORS.amber}
+                                />
+                                <KpiCard
+                                    label="مغلقة"
+                                    value={closedTasks.length}
+                                    helper="تمت معالجتها"
+                                    accent={COLORS.green}
+                                />
+                                <KpiCard
+                                    label="عالية الأولوية"
+                                    value={highPriorityTasks.length}
+                                    helper="تؤثر على قرار التقديم"
+                                    accent={COLORS.red}
+                                />
+                            </div>
+
+                            {approvalMessage && (
+                                <div
+                                    style={{
+                                        background: approvalMessage.includes("تعذر") ? "#fef2f2" : "#ecfdf5",
+                                        color: approvalMessage.includes("تعذر") ? "#991b1b" : "#065f46",
+                                        border: approvalMessage.includes("تعذر")
+                                            ? "1px solid #fecaca"
+                                            : "1px solid #a7f3d0",
+                                        borderRadius: "14px",
+                                        padding: "13px",
+                                        marginBottom: "12px",
+                                        fontWeight: 800,
+                                    }}
+                                >
+                                    {approvalMessage}
+                                </div>
+                            )}
+
+                            {isFallbackMode && (
+                                <div
+                                    style={{
+                                        background: "#fff7ed",
+                                        color: "#7c2d12",
+                                        border: "1px solid #fed7aa",
+                                        borderRadius: "14px",
+                                        padding: "13px",
+                                        marginBottom: "12px",
+                                        fontWeight: 800,
+                                        lineHeight: 1.9,
+                                    }}
+                                >
+                                    هذه مهام مقترحة بصريًا من مصفوفة الأدلة. لتثبيتها تشغيليًا، أعد تشغيل إنشاء مهام الفجوات أو راجع الربط الخلفي.
+                                </div>
+                            )}
+
+                            <div
+                                style={{
+                                    display: "grid",
+                                    gridTemplateColumns: "minmax(280px, 1fr) minmax(280px, 1fr)",
+                                    gap: "12px",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        background: openTasks.length > 0 ? "#fff7ed" : "#ecfdf5",
+                                        border: openTasks.length > 0 ? "1px solid #fed7aa" : "1px solid #a7f3d0",
+                                        borderRadius: "18px",
+                                        padding: "16px",
+                                    }}
+                                >
+                                    <p
+                                        style={{
+                                            margin: "0 0 7px",
+                                            color: openTasks.length > 0 ? "#9a3412" : "#065f46",
+                                            fontSize: "12px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        حالة الإغلاق قبل التقديم
+                                    </p>
+                                    <h3
+                                        style={{
+                                            margin: 0,
+                                            color: openTasks.length > 0 ? "#7c2d12" : "#065f46",
+                                            lineHeight: 1.8,
+                                        }}
+                                    >
+                                        {openTasks.length > 0
+                                            ? "يوجد مهام فجوات مفتوحة يجب إغلاقها قبل اعتماد التقديم."
+                                            : "لا توجد مهام فجوات مفتوحة حالياً."}
+                                    </h3>
+                                </div>
+
+                                <div
+                                    style={{
+                                        background: "#eef6ff",
+                                        border: "1px solid #bfdbfe",
+                                        borderRadius: "18px",
+                                        padding: "16px",
+                                    }}
+                                >
+                                    <p
+                                        style={{
+                                            margin: "0 0 7px",
+                                            color: COLORS.blue,
+                                            fontSize: "12px",
+                                            fontWeight: 900,
+                                        }}
+                                    >
+                                        منطق الوكيل
+                                    </p>
+                                    <p
+                                        style={{
+                                            margin: 0,
+                                            color: COLORS.navy,
+                                            lineHeight: 1.9,
+                                            fontWeight: 800,
+                                        }}
+                                    >
+                                        يتم توليد المهام الحقيقية من الباك إند، وإذا لم تُرجع الواجهة مهامًا محفوظة يعرض منجز مهامًا مشتقة من فجوات مصفوفة الأدلة حتى لا تضيع سلسلة القرار أمام الفريق.
+                                    </p>
+                                </div>
+                            </div>
+                        </SectionCard>
+
+                        {displayedTasks.length === 0 ? (
+                            <SectionCard>
+                                <div
+                                    style={{
+                                        background: "#f8fafc",
+                                        border: "1px dashed #cbd5e1",
+                                        borderRadius: "18px",
+                                        padding: "24px",
+                                        textAlign: "center",
+                                        color: COLORS.muted,
+                                        fontWeight: 800,
+                                        lineHeight: 1.9,
+                                    }}
+                                >
+                                    لا توجد مهام فجوات مقترحة حتى الآن، ولا توجد فجوات أدلة يمكن اشتقاق مهام منها. شغّل تحليل التغطية من تبويب المستندات ثم أنشئ مهام الفجوات.
+                                </div>
+                            </SectionCard>
+                        ) : (
+                            <div style={{ display: "grid", gap: "14px" }}>
+                                {taskGroups.map((group) => (
+                                    <SectionCard key={group.title}>
+                                        <SectionHeader
+                                            title={group.title}
+                                            subtitle={group.subtitle}
+                                            action={
+                                                <Badge
+                                                    style={{
+                                                        background: "#F4F6F6",
+                                                        color: COLORS.navy,
+                                                        border: "1px solid #DFE7E4",
+                                                    }}
+                                                >
+                                                    {group.tasks.length} مهام
+                                                </Badge>
+                                            }
+                                        />
+
+                                        {group.tasks.length === 0 ? (
+                                            <div
+                                                style={{
+                                                    border: "1px dashed #dbe3e0",
+                                                    borderRadius: "16px",
+                                                    padding: "15px",
+                                                    color: COLORS.lightMuted,
+                                                    fontWeight: 800,
+                                                    textAlign: "center",
+                                                }}
+                                            >
+                                                {group.empty}
+                                            </div>
+                                        ) : (
+                                            <div
+                                                style={{
+                                                    display: "grid",
+                                                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                                                    gap: "12px",
+                                                }}
+                                            >
+                                                {group.tasks.map(renderTaskCard)}
+                                            </div>
+                                        )}
+                                    </SectionCard>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+
+
+            </div>
         </main>
     );
-}   
+}

@@ -67,54 +67,40 @@ export default function RootLayout({
                 textAlign: "center",
               }}
             >
-              <Link
+            <Link
                 href="/dashboard"
                 aria-label="منجز"
                 style={{
-                  width: 142,
-                  height: 82,
-                  margin: "0 auto 12px",
-                  borderRadius: 22,
-                  background: "rgba(255,255,255,0.055)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  padding: 12,
-                  overflow: "hidden",
+                  minWidth: 160,
+                  height: 88,
+                  margin: "0 auto 10px",
+                  overflow: "visible",
                   textDecoration: "none",
-                  boxSizing: "border-box",
                 }}
               >
                 <img
-                  src="/brand/munjiz-logo-transparent.png"
+                  src="/brand/munjiz-logo-on-dark.png"
                   alt="منجز"
                   style={{
                     display: "block",
-                    width: 118,
-                    maxWidth: 118,
-                    maxHeight: 58,
+                    width: 155,
                     height: "auto",
+                    maxHeight: 72,
                     objectFit: "contain",
                   }}
                 />
               </Link>
 
-              <div style={{ display: "grid", gap: 4, textAlign: "center" }}>
-                <strong
-                  style={{
-                    color: "#ffffff",
-                    fontSize: "1.08rem",
-                    fontWeight: 800,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  مُنجز
-                </strong>
+              <div style={{ display: "grid", gap: 2, textAlign: "center" }}>
                 <span
                   style={{
-                    color: "rgba(255,255,255,0.68)",
-                    fontSize: "0.8rem",
-                    lineHeight: 1.7,
+                    color: "rgba(255,255,255,0.50)",
+                    fontSize: "0.75rem",
+                    lineHeight: 1.6,
+                    letterSpacing: "0.02em",
                   }}
                 >
                   نظام تحليل المناقصات

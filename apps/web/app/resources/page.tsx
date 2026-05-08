@@ -859,21 +859,22 @@ export default function ResourcesPage() {
 
 const pageStyle: CSSProperties = {
     minHeight: "100vh",
-    background: "#f8fafc",
-    color: "#0f172a",
-    padding: "32px",
+    background: "#F4F6F6",
+    color: "#232122",
+    display: "grid",
+    gap: "12px",
+    alignContent: "start",
     fontFamily:
         '"IBM Plex Sans Arabic", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif',
 };
 
 const heroStyle: CSSProperties = {
-    border: "1px solid #e2e8f0",
+    position: "relative",
+    overflow: "hidden",
     borderRadius: "24px",
-    padding: "28px",
-    marginBottom: "24px",
-    background:
-        "linear-gradient(135deg, rgba(239,246,255,1) 0%, rgba(255,255,255,1) 55%, rgba(240,253,250,1) 100%)",
-    boxShadow: "0 20px 45px rgba(15,23,42,0.06)",
+    marginBottom: "12px",
+    background: "linear-gradient(135deg, #1c1b1c 0%, #232122 60%, #1a1819 100%)",
+    boxShadow: "0 24px 56px rgba(35,33,34,0.22)",
 };
 
 const heroInnerStyle: CSSProperties = {
@@ -881,72 +882,77 @@ const heroInnerStyle: CSSProperties = {
     justifyContent: "space-between",
     gap: "24px",
     alignItems: "center",
+    padding: "28px",
+    position: "relative",
+    zIndex: 1,
 };
 
 const pillStyle: CSSProperties = {
     display: "inline-flex",
-    padding: "8px 14px",
+    padding: "4px 12px",
     borderRadius: "999px",
-    background: "#ecfeff",
-    color: "#0f766e",
-    fontWeight: 800,
-    fontSize: "13px",
-    marginBottom: "14px",
-    border: "1px solid #99f6e4",
+    background: "rgba(89,186,71,0.15)",
+    color: "#7de86a",
+    fontWeight: 900,
+    fontSize: "11px",
+    marginBottom: "10px",
+    border: "1px solid rgba(89,186,71,0.25)",
+    letterSpacing: "0.04em",
 };
 
 const pageTitleStyle: CSSProperties = {
     margin: 0,
-    fontSize: "34px",
+    fontSize: "28px",
     letterSpacing: "-0.03em",
+    color: "#ffffff",
+    fontWeight: 950,
 };
 
 const heroTextStyle: CSSProperties = {
-    margin: "10px 0 0",
-    color: "#64748b",
-    lineHeight: 1.9,
-    maxWidth: "900px",
-    fontSize: "15px",
+    margin: "8px 0 0",
+    color: "rgba(255,255,255,0.52)",
+    lineHeight: 1.8,
+    maxWidth: "780px",
+    fontSize: "13px",
 };
 
 const primaryButtonStyle: CSSProperties = {
     border: "0",
     borderRadius: "14px",
-    padding: "13px 20px",
-    background: "#0f766e",
+    padding: "11px 18px",
+    background: "#59BA47",
     color: "white",
     fontWeight: 900,
     cursor: "pointer",
-    boxShadow: "0 14px 30px rgba(15,118,110,0.22)",
+    boxShadow: "0 8px 20px rgba(89,186,71,0.35)",
+    fontSize: "13px",
 };
 
 const darkButtonStyle: CSSProperties = {
-    border: "0",
+    border: "1px solid rgba(255,255,255,0.15)",
     borderRadius: "14px",
-    padding: "13px 20px",
-    background: "#0f172a",
-    color: "white",
-    fontWeight: 800,
+    padding: "10px 16px",
+    background: "rgba(255,255,255,0.08)",
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: 900,
     cursor: "pointer",
-    boxShadow: "0 14px 30px rgba(15,23,42,0.18)",
+    fontSize: "13px",
 };
 
 const statsGridStyle: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "16px",
-    marginBottom: "22px",
+    gap: "10px",
 };
 
 const filtersStyle: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "1.6fr 1fr 1fr",
-    gap: "14px",
-    marginBottom: "22px",
+    gap: "12px",
     background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    padding: "16px",
+    border: "1px solid #DFE7E4",
+    borderRadius: "18px",
+    padding: "14px",
 };
 
 const inputStyle: CSSProperties = {
@@ -984,15 +990,16 @@ const emptyStateStyle: CSSProperties = {
 const cardsGridStyle: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "18px",
+    gap: "12px",
 };
 
 const cardStyle: CSSProperties = {
     background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "22px",
-    padding: "22px",
-    boxShadow: "0 14px 35px rgba(15,23,42,0.045)",
+    border: "1px solid #DFE7E4",
+    borderRadius: "20px",
+    padding: "20px",
+    boxShadow: "0 2px 12px rgba(35,33,34,0.04)",
+    overflow: "hidden",
 };
 
 const cardHeaderStyle: CSSProperties = {
@@ -1397,21 +1404,25 @@ function StatCard({
         <div
             style={{
                 background: "white",
-                border: "1px solid #e2e8f0",
-                borderRadius: "20px",
-                padding: "20px",
-                boxShadow: "0 12px 30px rgba(15,23,42,0.04)",
-                borderRight: `6px solid ${color}`,
+                border: "1px solid #DFE7E4",
+                borderRadius: "18px",
+                display: "flex",
+                overflow: "hidden",
+                boxShadow: "0 2px 10px rgba(35,33,34,0.04)",
+                minHeight: "100px",
             }}
         >
-            <div style={{ color: "#64748b", fontWeight: 800, fontSize: "13px" }}>
-                {title}
-            </div>
-            <div style={{ fontSize: "34px", fontWeight: 900, marginTop: "8px" }}>
-                {value}
-            </div>
-            <div style={{ color: "#94a3b8", fontWeight: 700, fontSize: "12px" }}>
-                {hint}
+            <div style={{ width: "4px", background: color, flexShrink: 0 }} />
+            <div style={{ padding: "14px", flex: 1 }}>
+                <div style={{ color: "#8a9591", fontWeight: 900, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "6px" }}>
+                    {title}
+                </div>
+                <div style={{ fontSize: "30px", fontWeight: 950, letterSpacing: "-0.03em", lineHeight: 1, color }}>
+                    {value}
+                </div>
+                <div style={{ color: "#9CA3AF", fontWeight: 700, fontSize: "11px", marginTop: "6px" }}>
+                    {hint}
+                </div>
             </div>
         </div>
     );

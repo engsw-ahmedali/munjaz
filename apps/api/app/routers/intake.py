@@ -130,47 +130,187 @@ def infer_priority(title: str) -> str:
     return "متوسطة"
 
 
-def parse_requirements_from_text(text: str) -> List[Dict[str, str]]:
-    lines = []
-    for raw_line in text.splitlines():
+SECTION_HEADINGS: Dict[str, List[str]] = {
+    "general": ["معلومات عامة", "البيانات العامة", "بيانات عامة"],
+    "description": ["وصف المنافسة", "وصف المشروع", "نبذة عن المنافسة"],
+    "scope": ["نطاق العمل", "الأعمال المطلوبة", "مجال العمل"],
+    "technical_requirements": ["المتطلبات الفنية", "الشروط الفنية", "المواصفات الفنية"],
+    "required_documents": ["المستندات المطلوبة", "الوثائق المطلوبة", "المرفقات المطلوبة"],
+    "evaluation": ["شروط التقييم", "معايير التقييم", "آلية التقييم"],
+    "risks": ["المخاطر والملاحظات", "الملاحظات والمخاطر", "ملاحظات مهمة", "المخاطر"],
+    "deliverables": ["مخرجات المشروع المطلوبة", "المخرجات المطلوبة", "مخرجات المشروع"],
+}
+
+ALL_SECTION_LABELS = [label for labels in SECTION_HEADINGS.values() for label in labels]
+
+
+def strip_numbering(value: str) -> str:
+    value = value.strip()
+    value = re.sub(r"^[\-\*\•\u2022]+\s*", "", value)
+    value = re.sub(r"^[\(\[]?\d{1,3}[\)\]\.]\s*", "", value)
+    return value.strip(" \t:-：")
+
+
+def normalize_arabic_text(value: str) -> str:
+    value = value.replace("\r\n", "\n").replace("\r", "\n")
+    value = value.replace("：", ":")
+    value = re.sub(r"[ \t]+", " ", value)
+    value = re.sub(r"\n{3,}", "\n\n", value)
+    return value.strip()
+
+
+def extract_labeled_value(text: str, labels: List[str]) -> str:
+    if not text:
+        return ""
+
+    for label in labels:
+        pattern = rf"(?:^|\n)\s*{re.escape(label)}\s*[:：]\s*([^\n]+)"
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip(" \t.-")
+
+    return ""
+
+
+def detect_section_key(line: str) -> Optional[str]:
+    cleaned = strip_numbering(line)
+    cleaned = cleaned.strip(" :：")
+    if not cleaned:
+        return None
+
+    for key, labels in SECTION_HEADINGS.items():
+        for label in labels:
+            if cleaned == label or cleaned.startswith(label):
+                return key
+
+    return None
+
+
+def split_document_sections(text: str) -> Dict[str, str]:
+    normalized = normalize_arabic_text(text)
+    sections: Dict[str, List[str]] = {}
+    current_key: Optional[str] = None
+
+    for raw_line in normalized.splitlines():
         line = raw_line.strip()
-        line = re.sub(r"^[\-\*\•\d\.\)\(]+\s*", "", line).strip()
-        if len(line) >= 8:
-            lines.append(line)
+        if not line:
+            if current_key:
+                sections.setdefault(current_key, []).append("")
+            continue
 
-    candidates = []
-    keywords = [
-        "يجب",
-        "يلتزم",
-        "المطلوب",
-        "يشترط",
-        "تقديم",
-        "وجود",
-        "خبرة",
-        "شهادة",
-        "خطة",
-        "توريد",
-        "تنفيذ",
-        "صيانة",
-        "must",
-        "shall",
-        "required",
-        "requirement",
-    ]
+        detected = detect_section_key(line)
+        if detected:
+            current_key = detected
+            sections.setdefault(current_key, [])
+            continue
 
-    for line in lines:
-        if any(keyword.lower() in line.lower() for keyword in keywords):
-            if line not in candidates:
-                candidates.append(line)
+        if current_key:
+            sections.setdefault(current_key, []).append(line)
 
-    if not candidates:
-        candidates = lines[:8]
+    return {key: "\n".join(lines).strip() for key, lines in sections.items() if "\n".join(lines).strip()}
 
-    requirements = []
-    for candidate in candidates[:15]:
+
+def clean_item_line(line: str) -> str:
+    line = strip_numbering(line)
+    line = re.sub(r"\s+", " ", line).strip()
+    line = line.strip("-–—•؛; ")
+    return line
+
+
+def clean_section_items(section_text: str, *, min_len: int = 4) -> List[str]:
+    items: List[str] = []
+    skip_prefixes = (
+        "يجب على المتقدم",
+        "يجب إرفاق",
+        "يشمل نطاق العمل",
+        "سيتم تقييم",
+        "تطرح",
+        "اسم المنافسة",
+        "الجهة المالكة",
+        "رقم المنافسة",
+        "آخر موعد",
+        "مدة التنفيذ",
+        "مكان التنفيذ",
+    )
+
+    for raw_line in section_text.splitlines():
+        line = clean_item_line(raw_line)
+        if len(line) < min_len:
+            continue
+        if any(line.startswith(prefix) for prefix in skip_prefixes):
+            continue
+        if detect_section_key(line):
+            continue
+        if line not in items:
+            items.append(line)
+
+    return items
+
+
+def build_description_from_sections(sections: Dict[str, str], extracted_text: str) -> str:
+    description = sections.get("description", "").strip()
+    if description:
+        return re.sub(r"\s+", " ", description).strip()[:900]
+
+    scope = sections.get("scope", "").strip()
+    if scope:
+        return "يشمل نطاق المنافسة: " + "، ".join(clean_section_items(scope)[:6])
+
+    text = normalize_arabic_text(extracted_text)
+    if text:
+        return text[:700]
+
+    return "تم إنشاء هذه المنافسة من ملف مرفوع وتحتاج إلى مراجعة البيانات قبل الاعتماد."
+
+
+def parse_requirements_from_text(text: str) -> List[Dict[str, str]]:
+    sections = split_document_sections(text)
+    requirement_source = sections.get("technical_requirements", "")
+
+    # لا نخلط نطاق العمل مع المتطلبات إلا إذا لم يوجد قسم متطلبات إطلاقًا.
+    if requirement_source:
+        candidate_lines = clean_section_items(requirement_source, min_len=8)
+    else:
+        candidate_lines = []
+        lines = []
+        for raw_line in text.splitlines():
+            line = clean_item_line(raw_line)
+            if len(line) >= 8:
+                lines.append(line)
+
+        keywords = [
+            "يجب",
+            "يلتزم",
+            "المطلوب",
+            "يشترط",
+            "تقديم",
+            "وجود",
+            "توفر",
+            "توفير",
+            "خبرة",
+            "شهادة",
+            "خطة",
+            "ضمان",
+            "دعم فني",
+            "must",
+            "shall",
+            "required",
+            "requirement",
+        ]
+
+        for line in lines:
+            if any(keyword.lower() in line.lower() for keyword in keywords):
+                if line not in candidate_lines:
+                    candidate_lines.append(line)
+
+        if not candidate_lines:
+            candidate_lines = lines[:8]
+
+    requirements: List[Dict[str, str]] = []
+    for candidate in candidate_lines[:18]:
         requirements.append(
             {
-                "title": candidate[:180],
+                "title": candidate[:220],
                 "category": infer_category(candidate),
                 "priority": infer_priority(candidate),
                 "status": "غير مغطى",
@@ -253,18 +393,40 @@ def fallback_file_intake(
     filename: str,
     extracted_text: str,
 ) -> Dict[str, Any]:
-    title = Path(filename).stem.replace("_", " ").replace("-", " ").strip()
+    """Section-aware deterministic extractor.
 
+    This is intentionally stronger than a generic keyword fallback so the demo does
+    not look like a broken chatbot if the LLM/API is unavailable. It reads Arabic
+    tender sections by heading and keeps scope, requirements, documents and risks
+    separated.
+    """
+    normalized_text = normalize_arabic_text(extracted_text)
+    sections = split_document_sections(normalized_text)
+
+    title = extract_labeled_value(
+        normalized_text,
+        ["اسم المنافسة", "عنوان المنافسة", "اسم المشروع", "عنوان المشروع"],
+    )
+    if not title:
+        title = Path(filename).stem.replace("_", " ").replace("-", " ").strip()
     if not title:
         title = "منافسة جديدة من ملف"
 
-    deadline = "2026-12-31"
-    date_match = re.search(r"(20\d{2})[-/](\d{1,2})[-/](\d{1,2})", extracted_text)
-    if date_match:
-        year, month, day = date_match.groups()
-        deadline = f"{year}-{int(month):02d}-{int(day):02d}"
+    client = extract_labeled_value(
+        normalized_text,
+        ["الجهة المالكة", "الجهة", "العميل", "صاحب المشروع", "الجهة المستفيدة"],
+    )
+    if not client:
+        client = "جهة غير محددة"
 
-    requirements = parse_requirements_from_text(extracted_text)
+    deadline = extract_labeled_value(
+        normalized_text,
+        ["آخر موعد للتقديم", "موعد التقديم", "تاريخ الإغلاق", "آخر موعد", "تاريخ التقديم"],
+    )
+    deadline = normalize_deadline(deadline)
+
+    description = build_description_from_sections(sections, normalized_text)
+    requirements = parse_requirements_from_text(normalized_text)
 
     if not requirements:
         requirements = [
@@ -282,28 +444,117 @@ def fallback_file_intake(
             },
         ]
 
+    required_documents = clean_section_items(sections.get("required_documents", ""), min_len=3)
+    if not required_documents:
+        required_documents = [
+            "السجل التجاري ساري المفعول",
+            "شهادة ضريبة القيمة المضافة",
+            "العرض الفني",
+            "العرض المالي",
+            "خطة تنفيذ المشروع",
+        ]
+
+    risk_notes = clean_section_items(sections.get("risks", ""), min_len=8)
+    if not risk_notes:
+        risk_notes = [
+            "تحتاج البيانات المستخرجة إلى مراجعة بشرية قبل الاعتماد النهائي.",
+            "يجب التأكد من إرفاق الأدلة الداعمة لكل متطلب قبل قرار التقديم.",
+        ]
+
+    confidence_fields = []
+    if client == "جهة غير محددة":
+        confidence_fields.append("client")
+    if deadline == "2026-12-31":
+        confidence_fields.append("submission_deadline")
+
     return {
         "title": title,
-        "client": "جهة غير محددة",
-        "description": extracted_text[:700] if extracted_text else "تم إنشاء هذه المنافسة من ملف مرفوع وتحتاج إلى مراجعة البيانات قبل الاعتماد.",
+        "client": client,
+        "description": description,
         "submission_deadline": deadline,
         "status": "UNDER_REVIEW",
         "readiness_score": 25,
         "requirements": requirements,
-        "required_documents": [
-            "المستندات النظامية المطلوبة",
-            "العرض الفني",
-            "العرض المالي",
-            "خطة التنفيذ",
-        ],
-        "risk_notes": [
-            "تم إنشاء هذه البيانات آليًا وتحتاج إلى مراجعة بشرية قبل الاعتماد.",
-        ],
+        "required_documents": required_documents[:20],
+        "risk_notes": risk_notes[:12],
         "confidence_notes": {
-            "overall": "متوسطة",
-            "reason": "تم استخدام تحليل داخلي لأن OpenAI لم يرجع نتيجة منظمة أو النص المستخرج محدود.",
+            "overall": "عالية" if not confidence_fields else "متوسطة",
+            "fields_need_review": confidence_fields,
+            "reason": "تم استخدام محلل داخلي مدعوم بفهم أقسام كراسة المنافسة عند تعذر نتيجة OpenAI المنظمة.",
         },
     }
+
+
+INTAKE_RESULT_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "title": {"type": "string"},
+        "client": {"type": "string"},
+        "description": {"type": "string"},
+        "submission_deadline": {"type": "string"},
+        "status": {"type": "string", "enum": ["UNDER_REVIEW"]},
+        "readiness_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "requirements": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "title": {"type": "string"},
+                    "category": {
+                        "type": "string",
+                        "enum": ["فني", "إداري", "خبرات", "شهادات", "تقني", "عام"],
+                    },
+                    "priority": {"type": "string", "enum": ["عالية", "متوسطة", "منخفضة"]},
+                    "status": {"type": "string", "enum": ["غير مغطى"]},
+                },
+                "required": ["title", "category", "priority", "status"],
+            },
+        },
+        "required_documents": {"type": "array", "items": {"type": "string"}},
+        "risk_notes": {"type": "array", "items": {"type": "string"}},
+        "confidence_notes": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "overall": {"type": "string", "enum": ["عالية", "متوسطة", "منخفضة"]},
+                "fields_need_review": {"type": "array", "items": {"type": "string"}},
+                "reason": {"type": "string"},
+            },
+            "required": ["overall", "fields_need_review", "reason"],
+        },
+    },
+    "required": [
+        "title",
+        "client",
+        "description",
+        "submission_deadline",
+        "status",
+        "readiness_score",
+        "requirements",
+        "required_documents",
+        "risk_notes",
+        "confidence_notes",
+    ],
+}
+
+
+def response_to_text(response: Any) -> str:
+    output_text = getattr(response, "output_text", None)
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text.strip()
+
+    try:
+        chunks: List[str] = []
+        for item in getattr(response, "output", []) or []:
+            for content in getattr(item, "content", []) or []:
+                text_value = getattr(content, "text", None)
+                if text_value:
+                    chunks.append(str(text_value))
+        return "\n".join(chunks).strip()
+    except Exception:
+        return ""
 
 
 def openai_file_intake(
@@ -324,52 +575,70 @@ def openai_file_intake(
 
         client = OpenAI(api_key=api_key)
 
+        system_message = (
+            "أنت وكيل تشغيل منافسات داخل نظام Munjiz OS. "
+            "مهمتك قراءة كراسة المنافسة واستخراج بيانات قابلة للاعتماد التشغيلي. "
+            "افصل بدقة بين وصف المنافسة ونطاق العمل والمتطلبات الفنية والمستندات والمخاطر. "
+            "لا تستخدم اسم الملف كعنوان إذا كان داخل النص اسم منافسة واضح. "
+            "لا تخلط نطاق العمل مع المتطلبات الفنية. "
+            "أعد JSON مطابقًا للمخطط فقط."
+        )
+
+        user_payload = {
+            "filename": filename,
+            "extraction_rules": [
+                "استخرج title من: اسم المنافسة / عنوان المنافسة / اسم المشروع.",
+                "استخرج client من: الجهة المالكة / الجهة / العميل.",
+                "استخرج submission_deadline من: آخر موعد للتقديم أو أي تاريخ إغلاق واضح.",
+                "description يجب أن يكون ملخصًا مهنيًا من قسم وصف المنافسة فقط قدر الإمكان.",
+                "requirements يجب أن تأتي من قسم المتطلبات الفنية أو الشروط الفنية، ولا تدرج بنود نطاق العمل إلا إذا صيغت كشرط على المتقدم.",
+                "required_documents يجب أن تأتي من قسم المستندات المطلوبة.",
+                "risk_notes يجب أن تأتي من قسم المخاطر والملاحظات أو تُستنتج من نصوص التحذير الموجودة فقط.",
+                "استخدم جهة غير محددة فقط إذا لم تظهر الجهة في النص.",
+                "استخدم 2026-12-31 فقط إذا لم يظهر موعد التقديم في النص.",
+            ],
+            "document_text": extracted_text[:24000],
+        }
+
+        # Primary path: Responses API with strict structured output.
+        try:
+            response = client.responses.create(
+                model=model,
+                instructions=system_message,
+                input=json.dumps(user_payload, ensure_ascii=False),
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "munjiz_tender_intake_result",
+                        "strict": True,
+                        "schema": INTAKE_RESULT_SCHEMA,
+                    }
+                },
+                max_output_tokens=2600,
+            )
+            parsed = extract_first_json_object(response_to_text(response))
+            if parsed:
+                return parsed
+        except TypeError:
+            # Older OpenAI SDKs may not support the text.format argument.
+            pass
+
+        # Compatibility path: still uses OpenAI, but relies on explicit JSON-only prompting.
         prompt = {
             "task": "استخرج بيانات منافسة من نص كراسة أو مستند مناقصة. أعد JSON فقط دون Markdown.",
-            "filename": filename,
-            "required_schema": {
-                "title": "string",
-                "client": "string",
-                "description": "string",
-                "submission_deadline": "YYYY-MM-DD or string",
-                "status": "UNDER_REVIEW",
-                "readiness_score": 25,
-                "requirements": [
-                    {
-                        "title": "string",
-                        "category": "فني | إداري | خبرات | شهادات | تقني | عام",
-                        "priority": "عالية | متوسطة | منخفضة",
-                        "status": "غير مغطى",
-                    }
-                ],
-                "required_documents": ["string"],
-                "risk_notes": ["string"],
-                "confidence_notes": {
-                    "overall": "عالية | متوسطة | منخفضة",
-                    "fields_need_review": ["string"],
-                },
-            },
-            "rules": [
-                "لا تخترع أسماء جهات أو متطلبات غير موجودة بوضوح.",
-                "عند عدم وضوح الجهة اكتب: جهة غير محددة.",
-                "عند عدم وضوح الموعد اكتب: 2026-12-31 وضعه ضمن fields_need_review.",
-                "اجعل المتطلبات مختصرة وواضحة ومباشرة.",
-                "أعد JSON صالح فقط.",
-            ],
-            "document_text": extracted_text[:18000],
+            "required_schema": INTAKE_RESULT_SCHEMA,
+            "rules": user_payload["extraction_rules"],
+            "document_text": extracted_text[:24000],
         }
 
         response = client.responses.create(
             model=model,
-            instructions=(
-                "أنت وكيل متخصص في قراءة كراسات المنافسات واستخراج البيانات الأساسية "
-                "والمتطلبات والمستندات المطلوبة والمخاطر. أعد JSON فقط."
-            ),
+            instructions=system_message,
             input=json.dumps(prompt, ensure_ascii=False),
-            max_output_tokens=1800,
+            max_output_tokens=2600,
         )
 
-        parsed = extract_first_json_object(response.output_text)
+        parsed = extract_first_json_object(response_to_text(response))
         if not parsed:
             return None
 
@@ -385,34 +654,55 @@ def normalize_intake_result(
 ) -> Dict[str, Any]:
     fallback = fallback_file_intake(fallback_filename, extracted_text)
 
-    title = str(raw_result.get("title") or fallback["title"]).strip()
-    client = str(raw_result.get("client") or fallback["client"]).strip()
-    description = str(raw_result.get("description") or fallback["description"]).strip()
+    raw_title = str(raw_result.get("title") or "").strip()
+    filename_title = Path(fallback_filename).stem.replace("_", " ").replace("-", " ").strip().lower()
+    if not raw_title or raw_title.lower() == filename_title or raw_title.endswith(" AR"):
+        title = fallback["title"]
+    else:
+        title = raw_title
+
+    raw_client = str(raw_result.get("client") or "").strip()
+    if not raw_client or raw_client in ["جهة غير محددة", "غير محددة", "N/A", "na"]:
+        client = fallback["client"]
+    else:
+        client = raw_client
+
+    raw_description = str(raw_result.get("description") or "").strip()
+    description = raw_description if len(raw_description) >= 25 else fallback["description"]
 
     requirements = raw_result.get("requirements")
     if not isinstance(requirements, list) or not requirements:
         requirements = fallback["requirements"]
 
     normalized_requirements = []
+    seen_requirements = set()
     for item in requirements[:25]:
         if isinstance(item, dict):
             req_title = str(item.get("title") or "").strip()
             if not req_title:
                 continue
 
+            req_title = clean_item_line(req_title)[:220]
+            if req_title in seen_requirements:
+                continue
+            seen_requirements.add(req_title)
+
             normalized_requirements.append(
                 {
-                    "title": req_title[:220],
+                    "title": req_title,
                     "category": str(item.get("category") or infer_category(req_title)).strip(),
                     "priority": str(item.get("priority") or infer_priority(req_title)).strip(),
                     "status": str(item.get("status") or "غير مغطى").strip(),
                 }
             )
         elif isinstance(item, str) and item.strip():
-            req_title = item.strip()
+            req_title = clean_item_line(item)[:220]
+            if not req_title or req_title in seen_requirements:
+                continue
+            seen_requirements.add(req_title)
             normalized_requirements.append(
                 {
-                    "title": req_title[:220],
+                    "title": req_title,
                     "category": infer_category(req_title),
                     "priority": infer_priority(req_title),
                     "status": "غير مغطى",
@@ -423,11 +713,11 @@ def normalize_intake_result(
         normalized_requirements = fallback["requirements"]
 
     required_documents = raw_result.get("required_documents")
-    if not isinstance(required_documents, list):
+    if not isinstance(required_documents, list) or not required_documents:
         required_documents = fallback["required_documents"]
 
     risk_notes = raw_result.get("risk_notes")
-    if not isinstance(risk_notes, list):
+    if not isinstance(risk_notes, list) or not risk_notes:
         risk_notes = fallback["risk_notes"]
 
     confidence_notes = raw_result.get("confidence_notes")
@@ -441,11 +731,11 @@ def normalize_intake_result(
         "submission_deadline": normalize_deadline(
             str(raw_result.get("submission_deadline") or fallback["submission_deadline"])
         ),
-        "status": str(raw_result.get("status") or "UNDER_REVIEW"),
+        "status": "UNDER_REVIEW",
         "readiness_score": clamp_score(raw_result.get("readiness_score"), 25),
         "requirements": normalized_requirements,
-        "required_documents": [str(item).strip() for item in required_documents if str(item).strip()],
-        "risk_notes": [str(item).strip() for item in risk_notes if str(item).strip()],
+        "required_documents": [clean_item_line(str(item)) for item in required_documents if clean_item_line(str(item))],
+        "risk_notes": [clean_item_line(str(item)) for item in risk_notes if clean_item_line(str(item))],
         "confidence_notes": confidence_notes,
     }
 

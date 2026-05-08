@@ -95,6 +95,15 @@ type VerificationDetail = {
     manager_approval_required: boolean;
 };
 
+type TenderListItem = {
+    id: number;
+    title: string;
+    client: string;
+    status: string;
+    readiness_score: number;
+    submission_deadline: string;
+};
+
 type WorkbenchResponse = {
     member: TeamMember;
     tasks: GapTask[];
@@ -148,9 +157,11 @@ function WorkbenchContent() {
 
     const [team, setTeam] = useState<TeamMember[]>([]);
     const [selectedRole, setSelectedRole] = useState("technical_engineer");
-    // TODO: Replace fallback "4" with a proper tender-selector UI once the workbench
-    // supports multi-tender navigation. The ?tenderId= query param takes precedence.
-    const [tenderId, setTenderId] = useState(searchParams.get("tenderId") || "4");
+    const [tenderId, setTenderId] = useState(searchParams.get("tenderId") || "");
+
+    const [tenders, setTenders] = useState<TenderListItem[]>([]);
+    const [tendersLoading, setTendersLoading] = useState(false);
+    const [tendersError, setTendersError] = useState("");
 
     const [workbench, setWorkbench] = useState<WorkbenchResponse | null>(null);
     const [allTenderTasks, setAllTenderTasks] = useState<GapTask[]>([]);
@@ -192,6 +203,34 @@ function WorkbenchContent() {
         }
 
         return response.json();
+    }
+
+    async function loadTenders() {
+        setTendersLoading(true);
+        setTendersError("");
+        try {
+            const response = await fetch(`${API_BASE_URL}/tenders`, { cache: "no-store" });
+            if (!response.ok) throw new Error(await response.text());
+            const payload = await response.json();
+            const list: TenderListItem[] = Array.isArray(payload)
+                ? payload
+                : Array.isArray(payload?.tenders)
+                ? payload.tenders
+                : [];
+            setTenders(list);
+            // Auto-select: honour ?tenderId= param first, then first item
+            const paramId = searchParams.get("tenderId");
+            if (paramId && list.some((t) => String(t.id) === paramId)) {
+                setTenderId(paramId);
+            } else if (!tenderId && list.length > 0) {
+                setTenderId(String(list[0].id));
+            }
+        } catch (err) {
+            console.error(err);
+            setTendersError("تعذر تحميل المنافسات. حاول تحديث الصفحة.");
+        } finally {
+            setTendersLoading(false);
+        }
     }
 
     async function loadTeam() {
@@ -617,7 +656,7 @@ function WorkbenchContent() {
     }
 
     useEffect(() => {
-        loadTeam()
+        Promise.all([loadTenders(), loadTeam()])
             .then(() => refreshAll(selectedRole))
             .catch((error) => {
                 console.error(error);
@@ -681,21 +720,29 @@ function WorkbenchContent() {
 
     return (
         <main dir="rtl" style={pageStyle}>
+            {/* ── Hero ─────────────────────────────────────────────────── */}
             <section style={heroStyle}>
-                <div>
-                    <span style={pillStyle}>مركز قيادة إغلاق الفجوات</span>
-                    <h1 style={titleStyle}>مساحة عمل إغلاق الفجوات</h1>
-                    <p style={subtitleStyle}>
+                <div style={heroGlowStyle} />
+                <div style={heroGlow2Style} />
+                <div style={{ position: "relative", zIndex: 1 }}>
+                    <span style={heroPillStyle}>مركز قيادة إغلاق الفجوات</span>
+                    <h1 style={heroTitleStyle}>مساحة عمل إغلاق الفجوات</h1>
+                    <p style={heroSubStyle}>
                         مركز تشغيلي لإسناد فجوات المنافسة إلى الفريق المختص، واستلام الأدلة،
                         والتحقق منها، وتحديث جاهزية التقديم بناءً على سجل موثق قابل للمراجعة.
                     </p>
+                    <div style={{ marginTop: "14px", display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                        <div style={heroStatStyle}><span style={heroStatNumStyle}>{summary?.total ?? "—"}</span><span style={heroStatLabelStyle}>إجمالي المهام</span></div>
+                        <div style={heroStatStyle}><span style={heroStatNumStyle}>{summary?.open ?? "—"}</span><span style={heroStatLabelStyle}>مفتوحة</span></div>
+                        <div style={heroStatStyle}><span style={{ ...heroStatNumStyle, color: "#f87171" }}>{summary?.high_priority_open ?? "—"}</span><span style={heroStatLabelStyle}>عالية الأولوية</span></div>
+                        <div style={heroStatStyle}><span style={{ ...heroStatNumStyle, color: "#4ade80" }}>{summary?.closure_score ?? "—"}%</span><span style={heroStatLabelStyle}>درجة الإغلاق</span></div>
+                    </div>
                 </div>
-
-                <div style={heroActionsStyle}>
-                    <Link href="/tenders" style={secondaryButtonStyle}>
-                        العودة للمناقصات
+                <div style={{ position: "relative", zIndex: 1, display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                    <Link href="/tenders" style={heroSecondaryBtnStyle}>
+                        ← المنافسات
                     </Link>
-                    <Link href={`/tenders/${tenderId}/executive`} style={primaryButtonStyle}>
+                    <Link href={`/tenders/${tenderId}/executive`} style={heroPrimaryBtnStyle}>
                         لوحة القرار التنفيذية
                     </Link>
                 </div>
@@ -703,19 +750,80 @@ function WorkbenchContent() {
 
             {message ? <div style={messageStyle}>{message}</div> : null}
 
-            <section style={controlPanelStyle}>
-                <div style={fieldStyle}>
-                    <label style={labelStyle}>رقم المنافسة</label>
-                    <input
-                        value={tenderId}
-                        onChange={(event) => setTenderId(event.target.value)}
-                        style={inputStyle}
-                        placeholder="مثال: 4"
-                    />
+            {/* ── Tender Selector ─────────────────────────────────────── */}
+            <section style={tenderSelectorWrapperStyle}>
+                <div style={tenderSelectorHeaderStyle}>
+                    <div>
+                        <div style={selectorEyebrowStyle}>▸ نطاق المنافسة الحالي</div>
+                        <p style={selectorHintStyle}>المنافسة المختارة تتحكم في كل بيانات مساحة العمل والمهام والأدوار.</p>
+                    </div>
                 </div>
 
-                <div style={fieldStyle}>
-                    <label style={labelStyle}>الموظف / الدور</label>
+                {tendersLoading ? (
+                    <div style={selectorLoadingStyle}>جاري تحميل المنافسات...</div>
+                ) : tendersError ? (
+                    <div style={selectorErrorStyle}>{tendersError}</div>
+                ) : tenders.length === 0 ? (
+                    <div style={selectorEmptyStyle}>لا توجد منافسات متاحة للاختيار.</div>
+                ) : (
+                    <select
+                        value={tenderId}
+                        onChange={(e) => setTenderId(e.target.value)}
+                        style={tenderSelectStyle}
+                        aria-label="اختر المنافسة"
+                    >
+                        {tenders.map((t) => (
+                            <option key={t.id} value={String(t.id)}>
+                                {t.title} — {t.client}
+                            </option>
+                        ))}
+                    </select>
+                )}
+
+                {/* Selected Tender Premium Summary */}
+                {tenderId && (() => {
+                    const sel = tenders.find((t) => String(t.id) === tenderId);
+                    if (!sel) return null;
+                    const score = Number(sel.readiness_score || 0);
+                    const scoreColor = score >= 80 ? "#16a34a" : score >= 50 ? "#d97706" : "#dc2626";
+                    const scoreBg = score >= 80 ? "rgba(22,163,74,0.08)" : score >= 50 ? "rgba(217,119,6,0.08)" : "rgba(220,38,38,0.08)";
+                    return (
+                        <div style={selectedTenderCardStyle}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap" }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: "10px", fontWeight: 900, color: "#59BA47", marginBottom: "6px", letterSpacing: "0.08em", textTransform: "uppercase" }}>المنافسة النشطة</div>
+                                    <div style={{ fontWeight: 900, fontSize: "16px", color: "#232122", marginBottom: "4px", lineHeight: 1.4 }}>{sel.title}</div>
+                                    <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                                        <span style={{ fontSize: "13px", color: "#6b7280" }}>📋 {sel.client}</span>
+                                        {sel.submission_deadline && <span style={{ fontSize: "12px", color: "#9ca3af" }}>⏱ {sel.submission_deadline.slice(0, 10)}</span>}
+                                        <span style={{ fontSize: "12px", padding: "2px 8px", borderRadius: "999px", background: "#f1f5f9", color: "#475569", fontWeight: 800 }}>رقم {sel.id}</span>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: "center", flexShrink: 0 }}>
+                                    <div style={{ width: "64px", height: "64px", borderRadius: "999px", border: `3px solid ${scoreColor}`, display: "flex", alignItems: "center", justifyContent: "center", background: scoreBg }}>
+                                        <span style={{ fontSize: "14px", fontWeight: 900, color: scoreColor }}>{score}%</span>
+                                    </div>
+                                    <div style={{ fontSize: "10px", color: "#9ca3af", marginTop: "4px", fontWeight: 800 }}>جاهزية</div>
+                                </div>
+                            </div>
+                            <div style={{ marginTop: "12px" }}>
+                                <div style={{ height: "6px", borderRadius: "999px", background: "#e5e7eb", overflow: "hidden" }}>
+                                    <div style={{ height: "100%", width: `${score}%`, borderRadius: "999px", background: `linear-gradient(90deg, ${scoreColor}, ${scoreColor}99)`, transition: "width 0.6s ease" }} />
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>0%</span>
+                                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>100%</span>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </section>
+
+            {/* ── Control Panel ───────────────────────────────────────── */}
+            <section style={controlPanelStyle}>
+                <div style={{ flex: 1, minWidth: "200px" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 900, color: "#59BA47", letterSpacing: "0.06em", marginBottom: "6px", textTransform: "uppercase" }}>الموظف / الدور</div>
                     <select
                         value={selectedRole}
                         onChange={(event) => setSelectedRole(event.target.value)}
@@ -729,19 +837,19 @@ function WorkbenchContent() {
                     </select>
                 </div>
 
-                <button onClick={generateTasks} disabled={loading} style={primaryButtonStyle}>
-                    {loading ? "جاري المعالجة..." : "توليد مهام الفجوات"}
-                </button>
-
-                <button onClick={() => refreshAll(selectedRole)} disabled={loading} style={secondaryButtonStyle}>
-                    تحديث البيانات
-                </button>
-
-                {tenderId === "4" && searchParams.get("internalTools") === "1" && (
-                    <button onClick={resetScenario} disabled={loading} style={{ ...secondaryButtonStyle, borderColor: "#6366f1", color: "#4f46e5", background: "#e0e7ff" }}>
-                        تهيئة سيناريو العرض
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                    <button onClick={generateTasks} disabled={loading || !tenderId} style={{ ...ctaPrimaryBtnStyle, opacity: loading || !tenderId ? 0.6 : 1 }}>
+                        {loading ? "⟳ جاري المعالجة..." : "⚡ توليد مهام الفجوات"}
                     </button>
-                )}
+                    <button onClick={() => refreshAll(selectedRole)} disabled={loading || !tenderId} style={{ ...ctaSecondaryBtnStyle, opacity: loading || !tenderId ? 0.6 : 1 }}>
+                        ↺ تحديث البيانات
+                    </button>
+                    {tenderId === "4" && searchParams.get("internalTools") === "1" && (
+                        <button onClick={resetScenario} disabled={loading} style={{ ...ctaSecondaryBtnStyle, borderColor: "#6366f1", color: "#4f46e5", background: "rgba(99,102,241,0.08)" }}>
+                            تهيئة سيناريو العرض
+                        </button>
+                    )}
+                </div>
             </section>
 
             {/* ===== ROLE COMMAND CENTER ===== */}
@@ -822,37 +930,25 @@ function WorkbenchContent() {
             )}
             {/* ===== END ROLE COMMAND CENTER ===== */}
 
-            <section style={dashboardStyle}>
-                <div>
-                    <span style={pillStyle}>لوحة تحكم الإغلاق</span>
-                    <h2 style={sectionTitleStyle}>
-                        {dashboard?.tender?.title || "مؤشرات إغلاق الفجوات"}
-                    </h2>
-                    <p style={sectionSubtitleStyle}>
-                        {dashboard?.tender?.client
-                            ? `الجهة: ${dashboard.tender.client}`
-                            : "تعرض هذه اللوحة حالة الأدلة، توزيع المهام، ونسبة الإغلاق الحالية."}
-                    </p>
-                </div>
-
-                {summary ? (
-                    <div style={decisionBoxStyle(summary.decision)}>
-                        <span>قرار الجاهزية</span>
-                        <strong>{summary.decision}</strong>
-                        <small>{summary.recommendation}</small>
-                    </div>
-                ) : null}
-            </section>
-
             {summary ? (
                 <section style={metricsGridStyle}>
-                    <MetricCard title="إجمالي المهام" value={`${summary.total}`} />
-                    <MetricCard title="مفتوحة" value={`${summary.open}`} />
-                    <MetricCard title="بانتظار مراجعة" value={`${summary.waiting_review}`} />
-                    <MetricCard title="مغلقة" value={`${summary.closed}`} />
-                    <MetricCard title="فجوات عالية مفتوحة" value={`${summary.high_priority_open}`} />
-                    <MetricCard title="درجة الإغلاق" value={`${summary.closure_score}%`} />
+                    <MetricCard title="إجمالي المهام" value={`${summary.total}`} accent="#2563eb" />
+                    <MetricCard title="مفتوحة" value={`${summary.open}`} accent="#f59e0b" />
+                    <MetricCard title="بانتظار مراجعة" value={`${summary.waiting_review}`} accent="#d97706" />
+                    <MetricCard title="مغلقة" value={`${summary.closed}`} accent="#16a34a" />
+                    <MetricCard title="فجوات حرجة مفتوحة" value={`${summary.high_priority_open}`} accent="#dc2626" />
+                    <MetricCard title="درجة الإغلاق" value={`${summary.closure_score}%`} accent="#59BA47" isScore />
                 </section>
+            ) : null}
+
+            {summary ? (
+                <div style={decisionBannerStyle(summary.decision)}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 900, opacity: 0.7, letterSpacing: "0.06em" }}>قرار الجاهزية الحالي</span>
+                        <strong style={{ fontSize: "16px", fontWeight: 900 }}>{summary.decision}</strong>
+                    </div>
+                    <span style={{ fontSize: "13px", opacity: 0.80, maxWidth: "600px", lineHeight: 1.6 }}>{summary.recommendation}</span>
+                </div>
             ) : null}
 
             <section style={insightsGridStyle}>
@@ -870,9 +966,15 @@ function WorkbenchContent() {
                                 .slice(0, 5)
                                 .map((task) => (
                                     <article key={task.id} style={criticalTaskStyle}>
-                                        <strong>{task.title}</strong>
-                                        <span>{task.owner_name}</span>
-                                        <small>{translateStatus(task.status)} — أثر {task.impact_score}%</small>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                                            <strong style={{ fontSize: "13px", color: "#232122", flex: 1, lineHeight: 1.4 }}>{task.title}</strong>
+                                            <span style={{ padding: "2px 8px", borderRadius: "999px", fontSize: "10px", fontWeight: 900, background: "rgba(220,38,38,0.10)", color: "#dc2626", border: "1px solid rgba(220,38,38,0.20)", flexShrink: 0 }}>عالية</span>
+                                        </div>
+                                        <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "4px" }}>
+                                            <span style={{ fontSize: "12px", color: "#6b7280" }}>{task.owner_name}</span>
+                                            <span style={{ fontSize: "11px", color: "#9ca3af" }}>• {translateStatus(task.status)}</span>
+                                            <span style={{ fontSize: "11px", color: "#d97706", fontWeight: 900, marginInlineStart: "auto" }}>أثر {task.impact_score}%</span>
+                                        </div>
                                     </article>
                                 ))}
                         </div>
@@ -928,15 +1030,25 @@ function WorkbenchContent() {
                 </section>
             </section>
 
-            <section style={memberPanelStyle}>
-                <div>
-                    <span style={pillStyle}>مساحة عمل الموظف</span>
-                    <h2 style={sectionTitleStyle}>
+            <section style={memberBannerStyle}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span style={{ fontSize: "10px", fontWeight: 900, color: "#59BA47", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>مساحة العمل النشطة</span>
+                    <span style={{ fontSize: "18px", fontWeight: 900, color: "#232122" }}>
                         {selectedMember?.title || workbench?.member?.title || "مساحة الموظف"}
-                    </h2>
-                    <p style={sectionSubtitleStyle}>
-                        {selectedMember?.department || workbench?.member?.department || "قسم غير محدد"}
-                    </p>
+                    </span>
+                    <span style={{ fontSize: "13px", color: "#6b7280" }}>
+                        {selectedMember?.name || workbench?.member?.name || ""}
+                        {(selectedMember?.department || workbench?.member?.department) ? ` • ${selectedMember?.department || workbench?.member?.department}` : ""}
+                    </span>
+                </div>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" as const, alignItems: "center" }}>
+                    {summary && (
+                        <>
+                            <span style={{ padding: "6px 12px", borderRadius: "999px", background: "rgba(37,99,235,0.09)", color: "#2563eb", fontSize: "12px", fontWeight: 900, border: "1px solid rgba(37,99,235,0.20)" }}>إجمالي: {summary.total}</span>
+                            <span style={{ padding: "6px 12px", borderRadius: "999px", background: "rgba(220,38,38,0.08)", color: "#dc2626", fontSize: "12px", fontWeight: 900, border: "1px solid rgba(220,38,38,0.20)" }}>حرجة: {summary.high_priority_open}</span>
+                            <span style={{ padding: "6px 12px", borderRadius: "999px", background: "rgba(89,186,71,0.10)", color: "#2d7a1e", fontSize: "12px", fontWeight: 900, border: "1px solid rgba(89,186,71,0.25)" }}>مغلقة: {summary.closed}</span>
+                        </>
+                    )}
                 </div>
             </section>
 
@@ -1180,11 +1292,11 @@ export default function EmployeeWorkbenchPage() {
     );
 }
 
-function MetricCard({ title, value }: { title: string; value: string }) {
+function MetricCard({ title, value, accent = "#59BA47", isScore = false }: { title: string; value: string; accent?: string; isScore?: boolean }) {
     return (
-        <div style={metricCardStyle}>
-            <span style={smallLabelStyle}>{title}</span>
-            <strong>{value}</strong>
+        <div style={{ ...metricCardStyle, borderTop: `3px solid ${accent}` }}>
+            <span style={{ ...smallLabelStyle, color: "#8a9591" }}>{title}</span>
+            <strong style={{ fontSize: "28px", fontWeight: 900, color: isScore ? accent : "#232122", letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</strong>
         </div>
     );
 }
@@ -1566,67 +1678,271 @@ function decisionBoxStyle(decision: string): CSSProperties {
 
 const pageStyle: CSSProperties = {
     minHeight: "100vh",
-    padding: "32px",
-    background: "#f8fafc",
-    color: "#0f172a",
+    padding: "28px 32px",
+    background: "#F4F6F6",
+    color: "#232122",
     fontFamily: '"IBM Plex Sans Arabic", "Noto Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif',
+    display: "grid",
+    gap: "14px",
+    alignContent: "start",
 };
 
 const heroStyle: CSSProperties = {
+    position: "relative",
+    overflow: "hidden",
     display: "flex",
     justifyContent: "space-between",
     gap: "22px",
     alignItems: "center",
-    padding: "28px",
-    borderRadius: "26px",
-    border: "1px solid #d1fae5",
-    background:
-        "linear-gradient(135deg, rgba(236,253,245,1) 0%, rgba(255,255,255,1) 58%, rgba(239,246,255,1) 100%)",
-    boxShadow: "0 18px 45px rgba(15,23,42,0.06)",
-    marginBottom: "20px",
-};
-
-const heroActionsStyle: CSSProperties = {
-    display: "flex",
-    gap: "10px",
     flexWrap: "wrap",
+    padding: "28px 32px",
+    borderRadius: "24px",
+    background: "linear-gradient(135deg, #1a1819 0%, #232122 55%, #1c2820 100%)",
+    boxShadow: "0 24px 56px rgba(35,33,34,0.28)",
 };
 
+const heroGlowStyle: CSSProperties = {
+    position: "absolute",
+    insetInlineEnd: "-60px",
+    top: "-80px",
+    width: "320px",
+    height: "320px",
+    borderRadius: "999px",
+    background: "rgba(89,186,71,0.12)",
+    filter: "blur(80px)",
+    pointerEvents: "none",
+};
+
+const heroGlow2Style: CSSProperties = {
+    position: "absolute",
+    insetInlineStart: "-40px",
+    bottom: "-60px",
+    width: "200px",
+    height: "200px",
+    borderRadius: "999px",
+    background: "rgba(89,186,71,0.06)",
+    filter: "blur(60px)",
+    pointerEvents: "none",
+};
+
+const heroPillStyle: CSSProperties = {
+    display: "inline-flex",
+    padding: "5px 13px",
+    borderRadius: "999px",
+    background: "rgba(89,186,71,0.15)",
+    color: "#86efac",
+    border: "1px solid rgba(89,186,71,0.30)",
+    fontWeight: 900,
+    fontSize: "11px",
+    marginBottom: "10px",
+    letterSpacing: "0.04em",
+};
+
+const heroTitleStyle: CSSProperties = {
+    margin: "0 0 6px",
+    fontSize: "30px",
+    fontWeight: 900,
+    color: "#ffffff",
+    letterSpacing: "-0.02em",
+};
+
+const heroSubStyle: CSSProperties = {
+    margin: 0,
+    color: "rgba(255,255,255,0.50)",
+    fontSize: "13px",
+    lineHeight: 1.75,
+    maxWidth: "600px",
+};
+
+const heroStatStyle: CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    paddingInlineEnd: "24px",
+    borderInlineEnd: "1px solid rgba(255,255,255,0.10)",
+};
+
+const heroStatNumStyle: CSSProperties = {
+    fontSize: "22px",
+    fontWeight: 900,
+    color: "white",
+    letterSpacing: "-0.03em",
+    lineHeight: 1,
+};
+
+const heroStatLabelStyle: CSSProperties = {
+    fontSize: "10px",
+    fontWeight: 800,
+    color: "rgba(255,255,255,0.40)",
+    letterSpacing: "0.04em",
+};
+
+const heroPrimaryBtnStyle: CSSProperties = {
+    border: "0",
+    borderRadius: "12px",
+    padding: "10px 18px",
+    background: "#59BA47",
+    color: "white",
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "13px",
+    boxShadow: "0 6px 20px rgba(89,186,71,0.40)",
+};
+
+const heroSecondaryBtnStyle: CSSProperties = {
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: "12px",
+    padding: "9px 15px",
+    background: "rgba(255,255,255,0.07)",
+    color: "rgba(255,255,255,0.80)",
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "13px",
+};
+
+// Keep pillStyle for existing JSX references
 const pillStyle: CSSProperties = {
     display: "inline-flex",
-    padding: "7px 13px",
+    padding: "5px 12px",
     borderRadius: "999px",
-    background: "#ecfeff",
-    color: "#0f766e",
-    border: "1px solid #99f6e4",
+    background: "rgba(89,186,71,0.10)",
+    color: "#2d7a1e",
+    border: "1px solid rgba(89,186,71,0.25)",
     fontWeight: 900,
-    fontSize: "12px",
-    marginBottom: "10px",
-};
-
-const titleStyle: CSSProperties = {
-    margin: 0,
-    fontSize: "34px",
-};
-
-const subtitleStyle: CSSProperties = {
-    margin: "10px 0 0",
-    color: "#64748b",
-    lineHeight: 1.9,
-    maxWidth: "880px",
+    fontSize: "11px",
+    marginBottom: "8px",
+    letterSpacing: "0.02em",
 };
 
 const controlPanelStyle: CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "180px 1fr auto auto",
-    gap: "12px",
-    alignItems: "end",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "14px",
+    alignItems: "flex-end",
     background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "22px",
+    border: "1px solid #DFE7E4",
+    borderRadius: "20px",
+    padding: "18px 20px",
+    boxShadow: "0 2px 8px rgba(35,33,34,0.04)",
+};
+
+const ctaPrimaryBtnStyle: CSSProperties = {
+    border: "0",
+    borderRadius: "12px",
+    padding: "11px 18px",
+    background: "#59BA47",
+    color: "white",
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+    boxShadow: "0 6px 16px rgba(89,186,71,0.35)",
+};
+
+const ctaSecondaryBtnStyle: CSSProperties = {
+    border: "1px solid #DFE7E4",
+    borderRadius: "12px",
+    padding: "10px 16px",
+    background: "#F4F6F6",
+    color: "#232122",
+    fontWeight: 900,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+};
+
+const tenderSelectorWrapperStyle: CSSProperties = {
+    background: "white",
+    border: "1px solid #DFE7E4",
+    borderRadius: "20px",
     padding: "18px",
-    marginBottom: "18px",
-    boxShadow: "0 14px 35px rgba(15,23,42,0.045)",
+    boxShadow: "0 2px 8px rgba(35,33,34,0.04)",
+    display: "grid",
+    gap: "12px",
+};
+
+const tenderSelectorHeaderStyle: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #DFE7E4",
+};
+
+const selectorEyebrowStyle: CSSProperties = {
+    fontSize: "11px",
+    fontWeight: 900,
+    color: "#59BA47",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    marginBottom: "3px",
+};
+
+const selectorHintStyle: CSSProperties = {
+    margin: 0,
+    fontSize: "12px",
+    color: "#8a9591",
+};
+
+const tenderSelectStyle: CSSProperties = {
+    width: "100%",
+    border: "1px solid #DFE7E4",
+    borderRadius: "14px",
+    padding: "12px 14px",
+    fontWeight: 900,
+    fontSize: "14px",
+    color: "#232122",
+    background: "#F4F6F6",
+    outline: "none",
+    cursor: "pointer",
+};
+
+const selectedTenderCardStyle: CSSProperties = {
+    padding: "14px",
+    borderRadius: "14px",
+    background: "#fafcfb",
+    border: "1px solid #DFE7E4",
+};
+
+const selectorLoadingStyle: CSSProperties = {
+    padding: "12px 14px",
+    borderRadius: "12px",
+    background: "#F4F6F6",
+    color: "#8a9591",
+    fontSize: "13px",
+    fontWeight: 800,
+};
+
+const selectorErrorStyle: CSSProperties = {
+    padding: "12px 14px",
+    borderRadius: "12px",
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    fontSize: "13px",
+    fontWeight: 800,
+};
+
+const selectorEmptyStyle: CSSProperties = {
+    padding: "12px 14px",
+    borderRadius: "12px",
+    background: "#F4F6F6",
+    color: "#8a9591",
+    fontSize: "13px",
+    fontWeight: 800,
 };
 
 const fieldStyle: CSSProperties = {
@@ -1663,9 +1979,9 @@ const textareaStyle: CSSProperties = {
 
 const primaryButtonStyle: CSSProperties = {
     border: "0",
-    borderRadius: "16px",
-    padding: "13px 18px",
-    background: "#0f172a",
+    borderRadius: "12px",
+    padding: "11px 18px",
+    background: "#59BA47",
     color: "white",
     fontWeight: 900,
     cursor: "pointer",
@@ -1673,35 +1989,39 @@ const primaryButtonStyle: CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 14px 30px rgba(15,23,42,0.16)",
+    gap: "6px",
+    fontSize: "13px",
+    boxShadow: "0 6px 16px rgba(89,186,71,0.30)",
 };
 
 const disabledButtonStyle: CSSProperties = {
-    border: "1px solid #cbd5e1",
-    borderRadius: "16px",
-    padding: "13px 18px",
-    background: "#f1f5f9",
-    color: "#94a3b8",
+    border: "1px solid #DFE7E4",
+    borderRadius: "12px",
+    padding: "11px 18px",
+    background: "#F4F6F6",
+    color: "#9ca3af",
     fontWeight: 900,
     cursor: "not-allowed",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: "13px",
 };
 
 const secondaryButtonStyle: CSSProperties = {
-    border: "1px solid #cbd5e1",
-    borderRadius: "16px",
-    padding: "12px 17px",
+    border: "1px solid #DFE7E4",
+    borderRadius: "12px",
+    padding: "10px 16px",
     background: "white",
-    color: "#0f172a",
+    color: "#232122",
     fontWeight: 900,
     cursor: "pointer",
     textDecoration: "none",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: "13px",
 };
 
 const messageStyle: CSSProperties = {
@@ -1730,10 +2050,23 @@ const dashboardStyle: CSSProperties = {
 const memberPanelStyle: CSSProperties = {
     padding: "22px",
     background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "24px",
-    marginBottom: "18px",
-    boxShadow: "0 14px 35px rgba(15,23,42,0.045)",
+    border: "1px solid #DFE7E4",
+    borderRadius: "18px",
+    boxShadow: "0 2px 8px rgba(35,33,34,0.03)",
+};
+
+const memberBannerStyle: CSSProperties = {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "16px",
+    flexWrap: "wrap",
+    padding: "16px 20px",
+    background: "white",
+    border: "1px solid #DFE7E4",
+    borderRadius: "16px",
+    borderInlineStart: "4px solid #59BA47",
+    boxShadow: "0 2px 8px rgba(35,33,34,0.03)",
 };
 
 const sectionTitleStyle: CSSProperties = {
@@ -1750,26 +2083,44 @@ const sectionSubtitleStyle: CSSProperties = {
 const metricsGridStyle: CSSProperties = {
     display: "grid",
     gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-    gap: "14px",
-    marginBottom: "18px",
+    gap: "10px",
 };
 
 const metricCardStyle: CSSProperties = {
     background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: "20px",
-    padding: "18px",
+    border: "1px solid #DFE7E4",
+    borderRadius: "16px",
+    padding: "16px 18px",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
-    boxShadow: "0 14px 35px rgba(15,23,42,0.045)",
+    gap: "6px",
+    boxShadow: "0 2px 8px rgba(35,33,34,0.03)",
 };
 
 const smallLabelStyle: CSSProperties = {
-    color: "#94a3b8",
-    fontSize: "12px",
+    color: "#8a9591",
+    fontSize: "11px",
     fontWeight: 900,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase" as const,
 };
+
+function decisionBannerStyle(decision: string): CSSProperties {
+    const isReady = decision === "جاهز للتقديم";
+    const isConditional = decision === "دخول مشروط";
+    const bg = isReady ? "linear-gradient(135deg,#166534,#15803d)" : isConditional ? "linear-gradient(135deg,#92400e,#b45309)" : "linear-gradient(135deg,#1e3a5f,#1d4ed8)";
+    return {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "16px",
+        padding: "16px 20px",
+        borderRadius: "16px",
+        background: bg,
+        color: "white",
+        flexWrap: "wrap" as const,
+    };
+}
 
 const insightsGridStyle: CSSProperties = {
     display: "grid",
@@ -1815,12 +2166,12 @@ const taskListStyle: CSSProperties = {
 
 function taskCardStyle(isClosed: boolean, isActive?: boolean): CSSProperties {
     return {
-        border: isActive ? "2px solid #2563eb" : (isClosed ? "1px solid #bbf7d0" : "1px solid #e2e8f0"),
-        background: isClosed ? "#f0fdf4" : "#f8fafc",
-        borderRadius: "20px",
-        padding: "18px",
-        opacity: isClosed ? 0.9 : 1,
-        boxShadow: isActive ? "0 12px 28px rgba(37,99,235,0.12)" : "none",
+        border: isActive ? "2px solid #59BA47" : (isClosed ? "1px solid #bbf7d0" : "1px solid #DFE7E4"),
+        background: isClosed ? "#f0fdf4" : "white",
+        borderRadius: "18px",
+        padding: "18px 20px",
+        opacity: isClosed ? 0.88 : 1,
+        boxShadow: isActive ? "0 8px 24px rgba(89,186,71,0.16)" : "0 2px 8px rgba(35,33,34,0.03)",
         position: "relative",
     };
 }
@@ -2098,18 +2449,18 @@ const roleCardsScrollStyle: CSSProperties = {
 };
 
 function roleCardStyle(isSelected: boolean, hasManagerQueue: boolean): CSSProperties {
-    let borderColor = "#e2e8f0";
-    let background = "#f8fafc";
-    let boxShadow = "0 4px 14px rgba(15,23,42,0.04)";
+    let borderColor = "#DFE7E4";
+    let background = "white";
+    let boxShadow = "0 2px 8px rgba(35,33,34,0.04)";
 
     if (isSelected) {
-        borderColor = "#0f172a";
-        background = "#0f172a";
-        boxShadow = "0 12px 32px rgba(15,23,42,0.22)";
+        borderColor = "#59BA47";
+        background = "#232122";
+        boxShadow = "0 12px 32px rgba(35,33,34,0.22)";
     } else if (hasManagerQueue) {
         borderColor = "#fca5a5";
         background = "#fff7f7";
-        boxShadow = "0 8px 24px rgba(220,38,38,0.12)";
+        boxShadow = "0 8px 24px rgba(220,38,38,0.10)";
     }
 
     return {
@@ -2117,13 +2468,13 @@ function roleCardStyle(isSelected: boolean, hasManagerQueue: boolean): CSSProper
         maxWidth: "210px",
         border: `2px solid ${borderColor}`,
         borderRadius: "20px",
-        padding: "16px",
+        padding: "18px",
         background,
         boxShadow,
-        color: isSelected ? "white" : "#0f172a",
+        color: isSelected ? "white" : "#232122",
         cursor: "pointer",
         flexShrink: 0,
-        transition: "box-shadow 0.18s, border-color 0.18s",
+        transition: "box-shadow 0.18s, border-color 0.18s, background 0.18s",
     };
 }
 
@@ -2271,13 +2622,13 @@ const activeTaskBadgeStyle: CSSProperties = {
     position: "absolute",
     top: "-12px",
     right: "24px",
-    background: "#2563eb",
+    background: "#59BA47",
     color: "white",
     padding: "4px 14px",
     borderRadius: "999px",
     fontSize: "12px",
     fontWeight: 900,
-    boxShadow: "0 4px 12px rgba(37,99,235,0.25)",
+    boxShadow: "0 4px 12px rgba(89,186,71,0.35)",
     zIndex: 10,
 };
 
